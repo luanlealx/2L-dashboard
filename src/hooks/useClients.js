@@ -203,13 +203,17 @@ export function useClients() {
         if (!res.ok) throw new Error(`Notion API error ${res.status}`);
 
         const data = await res.json();
+        console.log("[useClients] Notion response:", data);
+
         const parsed = (data.results ?? []).map(parseClient).filter(c => c.name);
+        console.log("[useClients] Parsed clients:", parsed.map(c => ({ id: c.id, name: c.name })));
 
         if (!cancelled && parsed.length > 0) {
           setClients(parsed);
           setError(null);
         }
       } catch (err) {
+        console.warn("[useClients] Notion fetch failed, using fallback:", err.message);
         if (!cancelled) setError(err.message);
       } finally {
         if (!cancelled) setLoading(false);

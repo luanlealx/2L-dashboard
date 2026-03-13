@@ -12,23 +12,29 @@ const STATUS_STYLE = {
   Prospect: { bg: "rgba(156,163,175,0.1)", border: "rgba(156,163,175,0.3)", text: "#9CA3AF" },
 };
 
-const IDIOMA_OPTIONS = [
-  "Português brasileiro",
-  "English only",
-  "Português e Inglês",
+// Two options only — no mixed-language option
+const IDIOMA_OPTIONS = ["Português brasileiro", "English only"];
+
+// Ordered list of all supported platforms for toggle UI
+const PLATFORM_OPTIONS = [
+  { label: "X / Twitter", icon: "𝕏" },
+  { label: "Instagram",   icon: "◎" },
+  { label: "LinkedIn",    icon: "in" },
+  { label: "Farcaster",   icon: "⌁" },
+  { label: "Discord",     icon: "◈" },
 ];
 
 const EXTRACT_FIELDS = [
-  { key: "nicho",      lbl: "NICHO" },
+  { key: "nicho",       lbl: "NICHO" },
   { key: "plataformas", lbl: "PLATAFORMAS" },
-  { key: "idioma",     lbl: "IDIOMA" },
-  { key: "tomDeVoz",   lbl: "TOM DE VOZ" },
-  { key: "restricoes", lbl: "RESTRIÇÕES" },
-  { key: "objetivos",  lbl: "OBJETIVOS" },
+  { key: "idioma",      lbl: "IDIOMA" },
+  { key: "tomDeVoz",    lbl: "TOM DE VOZ" },
+  { key: "restricoes",  lbl: "RESTRIÇÕES" },
+  { key: "objetivos",   lbl: "OBJETIVOS" },
 ];
 
 const EXTRACT_SYSTEM = `Você é um extrator de dados para perfis de clientes de agência de marketing.
-Analise o documento e retorne APENAS um objeto JSON válido com estas chaves exatas (string vazia "" se não encontrar):
+Analise o conteúdo e retorne APENAS um objeto JSON válido com estas chaves exatas (string vazia "" se não encontrar):
 
 {
   "nicho": "setor ou mercado em uma frase",
@@ -75,6 +81,15 @@ function readAsText(file) {
   });
 }
 
+// Toggle a platform label in/out of a comma-separated string,
+// preserving PLATFORM_OPTIONS display order.
+function togglePlatformStr(current, label) {
+  const active = new Set(current.split(",").map(s => s.trim()).filter(Boolean));
+  if (active.has(label)) active.delete(label);
+  else active.add(label);
+  return PLATFORM_OPTIONS.map(p => p.label).filter(l => active.has(l)).join(", ");
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatusBadge({ value }) {
@@ -116,24 +131,6 @@ function inputStyle(focused) {
   };
 }
 
-function PlatformTags({ value }) {
-  const tags = value.split(",").map(t => t.trim()).filter(Boolean);
-  if (!tags.length) return null;
-  return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 8 }}>
-      {tags.map((t, i) => (
-        <span key={i} style={{
-          fontSize: 11, padding: "2px 9px", borderRadius: 20,
-          background: C.brandDim, border: `1px solid ${C.brandBorder}`,
-          color: "#6B9FFF", fontFamily: "monospace",
-        }}>
-          {t}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ClientBase() {
@@ -141,12 +138,14 @@ export default function ClientBase() {
   const [selectedId, setSelectedId] = useState(null);
   const selected = clients.find(c => c.id === selectedId) ?? null;
 
-  const [form, setForm] = useState(null);
-  const [saving, setSaving] = useState(false);
+  const [form, setForm]       = useState(null);
+  const [saving, setSaving]   = useState(false);
   const [saveError, setSaveError] = useState(null);
-  const [saveOk, setSaveOk] = useState(false);
+  const [saveOk, setSaveOk]   = useState(false);
 
   // Document extraction state
+  const [pasteText, setPasteText]     = useState("");
+  const [pasteFocused, setPasteFocused] = useState(false);
   const [extracting, setExtracting]   = useState(false);
   const [extractError, setExtractError] = useState(null);
   const [extracted, setExtracted]     = useState(null);
@@ -164,7 +163,6 @@ export default function ClientBase() {
       status:              selected.status              ?? "Ativo",
       nicho:               selected.nicho               ?? "",
       plataformas:         selected.plataformas         ?? "",
-      idioma:              selected.idioma              ?? "",
       tomDeVoz:            selected.tomDeVoz            ?? "",
       restricoes:          selected.restricoes          ?? "",
       objetivos:           selected.objetivos           ?? "",
@@ -182,26 +180,13 @@ export default function ClientBase() {
     setSaveError(null);
   }
 
-  // ── Document extraction ──────────────────────────────────────────────────────
+  // ── Extraction core ──────────────────────────────────────────────────────────
 
-  async function handleExtractFile(file) {
+  async function runExtraction(messageContent) {
     setExtracting(true);
     setExtractError(null);
     setExtracted(null);
-
     try {
-      let content;
-      if (file.type === "application/pdf") {
-        const data = await readAsBase64(file);
-        content = [
-          { type: "document", source: { type: "base64", media_type: "application/pdf", data } },
-          { type: "text", text: "Extraia as informações do cliente/marca acima e retorne o JSON." },
-        ];
-      } else {
-        const text = await readAsText(file);
-        content = [{ type: "text", text }];
-      }
-
       const res = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -209,26 +194,40 @@ export default function ClientBase() {
           model: "claude-sonnet-4-6",
           max_tokens: 800,
           system: EXTRACT_SYSTEM,
-          messages: [{ role: "user", content }],
+          messages: [{ role: "user", content: messageContent }],
         }),
       });
-
       if (!res.ok) throw new Error(`Claude error ${res.status}`);
-
       const data = await res.json();
       const raw = data?.content?.[0]?.text ?? "";
-
-      // Extract JSON — Claude may wrap it in ```json ... ```
       const match = raw.match(/\{[\s\S]*\}/);
       if (!match) throw new Error("Não foi possível extrair dados do documento.");
-
-      const parsed = JSON.parse(match[0]);
-      setExtracted(parsed);
+      setExtracted(JSON.parse(match[0]));
     } catch (err) {
       setExtractError(err.message);
     } finally {
       setExtracting(false);
     }
+  }
+
+  async function handleExtractText() {
+    if (!pasteText.trim() || extracting) return;
+    await runExtraction([{ type: "text", text: pasteText }]);
+  }
+
+  async function handleExtractFile(file) {
+    let content;
+    if (file.type === "application/pdf") {
+      const data = await readAsBase64(file);
+      content = [
+        { type: "document", source: { type: "base64", media_type: "application/pdf", data } },
+        { type: "text", text: "Extraia as informações do cliente/marca acima e retorne o JSON." },
+      ];
+    } else {
+      const text = await readAsText(file);
+      content = [{ type: "text", text }];
+    }
+    await runExtraction(content);
   }
 
   function applyExtracted() {
@@ -246,7 +245,10 @@ export default function ClientBase() {
     if (!selected || !form || saving) return;
 
     if (!isNotionId(selected.id)) {
-      setSaveError("Este cliente não está conectado ao Notion. Configure NOTION_TOKEN e recarregue a página.");
+      setSaveError(
+        `Este cliente não está conectado ao Notion (id: "${selected.id}"). ` +
+        "Verifique se NOTION_TOKEN está configurado e recarregue a página."
+      );
       return;
     }
 
@@ -261,7 +263,6 @@ export default function ClientBase() {
         "Restrições":            { rich_text: toRichText(form.restricoes) },
         "Objetivos":             { rich_text: toRichText(form.objetivos) },
         "Idioma por Plataforma": { rich_text: toRichText(serializeIdiomaPerPlatform(form.idiomaPorPlataforma)) },
-        "Idioma":     { select: { name: form.idioma || "Português brasileiro" } },
         "Plataformas": {
           multi_select: form.plataformas
             .split(",").map(s => s.trim()).filter(Boolean).map(name => ({ name })),
@@ -295,8 +296,12 @@ export default function ClientBase() {
 
   // ── Derived ──────────────────────────────────────────────────────────────────
 
+  const activePlatforms = form
+    ? new Set(form.plataformas.split(",").map(s => s.trim()).filter(Boolean))
+    : new Set();
+
   const platformTags = form
-    ? form.plataformas.split(",").map(s => s.trim()).filter(Boolean)
+    ? PLATFORM_OPTIONS.map(p => p.label).filter(l => activePlatforms.has(l))
     : [];
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -352,8 +357,7 @@ export default function ClientBase() {
                       padding: "9px 10px", borderRadius: 8,
                       background: isActive ? C.brandDim : "none",
                       border: `1px solid ${isActive ? C.brandBorder : "transparent"}`,
-                      cursor: "pointer", textAlign: "left",
-                      transition: "all 0.12s",
+                      cursor: "pointer", textAlign: "left", transition: "all 0.12s",
                     }}
                   >
                     <span style={{ fontSize: 15, flexShrink: 0 }}>{c.emoji}</span>
@@ -403,7 +407,7 @@ export default function ClientBase() {
                 }}>
                   {selected.emoji}
                 </div>
-                <div style={{ flex: 1 }}>
+                <div>
                   <h2 style={{ fontSize: 20, fontWeight: 700, color: C.textBright, lineHeight: 1.2 }}>
                     {selected.name}
                   </h2>
@@ -411,42 +415,91 @@ export default function ClientBase() {
                     <StatusBadge value={form.status} />
                   </div>
                 </div>
+              </div>
 
-                {/* Preencher com documento button */}
-                <button
-                  onClick={() => extractFileRef.current?.click()}
-                  disabled={extracting}
+              {/* ── Preencher com documento ── */}
+              <div style={{
+                marginBottom: 28, padding: "16px", borderRadius: 12,
+                background: C.surfaceAlt, border: `1px solid ${C.border}`,
+              }}>
+                <label style={{ ...label, color: C.textDim, marginBottom: 10 }}>
+                  Preencher com documento
+                </label>
+
+                {/* Paste textarea */}
+                <textarea
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                  onFocus={() => setPasteFocused(true)}
+                  onBlur={() => setPasteFocused(false)}
+                  placeholder={"Cole um briefing, proposta ou texto do cliente aqui..."}
+                  rows={4}
                   style={{
-                    display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
-                    padding: "7px 12px", borderRadius: 8,
-                    border: `1px solid ${C.border}`,
-                    background: C.surfaceAlt, cursor: extracting ? "not-allowed" : "pointer",
-                    fontSize: 12, fontWeight: 500, fontFamily: "inherit",
-                    color: C.textMuted, transition: "all 0.15s",
-                  }}
-                >
-                  {extracting ? (
-                    <>
-                      <svg className="spin" width="12" height="12" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25"/>
-                        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
-                      </svg>
-                      Extraindo...
-                    </>
-                  ) : (
-                    <>📄 Preencher com documento</>
-                  )}
-                </button>
-                <input
-                  ref={extractFileRef}
-                  type="file"
-                  accept=".pdf,.txt,.md"
-                  style={{ display: "none" }}
-                  onChange={(e) => {
-                    if (e.target.files[0]) handleExtractFile(e.target.files[0]);
-                    e.target.value = "";
+                    width: "100%", display: "block",
+                    background: C.surface,
+                    border: `1px solid ${pasteFocused ? C.brand : C.border}`,
+                    borderRadius: 9, padding: "10px 12px",
+                    fontSize: 13, lineHeight: 1.6,
+                    color: C.textBright, resize: "none", fontFamily: "inherit",
+                    transition: "border-color 0.15s",
+                    boxShadow: pasteFocused ? "0 0 0 3px rgba(0,82,255,0.08)" : "none",
+                    outline: "none", marginBottom: 10,
                   }}
                 />
+
+                {/* Action row */}
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <button
+                    onClick={handleExtractText}
+                    disabled={extracting || !pasteText.trim()}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "7px 14px", borderRadius: 8, border: "none",
+                      background: pasteText.trim() && !extracting ? C.brand : C.surface,
+                      color: pasteText.trim() && !extracting ? "#fff" : C.textDim,
+                      fontSize: 12, fontWeight: 600, fontFamily: "inherit",
+                      cursor: pasteText.trim() && !extracting ? "pointer" : "not-allowed",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {extracting ? (
+                      <>
+                        <svg className="spin" width="12" height="12" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25"/>
+                          <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+                        </svg>
+                        Extraindo...
+                      </>
+                    ) : "Extrair do texto"}
+                  </button>
+
+                  <span style={{ fontSize: 11, color: C.textDim, fontFamily: "monospace" }}>ou</span>
+
+                  <button
+                    onClick={() => extractFileRef.current?.click()}
+                    disabled={extracting}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 5,
+                      padding: "7px 12px", borderRadius: 8,
+                      border: `1px solid ${C.border}`,
+                      background: "none", cursor: extracting ? "not-allowed" : "pointer",
+                      fontSize: 12, fontWeight: 500, fontFamily: "inherit",
+                      color: C.textMuted, transition: "all 0.15s",
+                    }}
+                  >
+                    📄 Upload de arquivo
+                  </button>
+                  <input
+                    ref={extractFileRef}
+                    type="file"
+                    accept=".pdf,.txt,.md"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      if (e.target.files[0]) handleExtractFile(e.target.files[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
               </div>
 
               {/* ── Extraction error ── */}
@@ -464,8 +517,7 @@ export default function ClientBase() {
               {extracted && (
                 <div className="slide-up" style={{
                   marginBottom: 28, borderRadius: 12, overflow: "hidden",
-                  border: `1px solid ${C.brandBorder}`,
-                  background: C.surfaceAlt,
+                  border: `1px solid ${C.brandBorder}`, background: C.surfaceAlt,
                 }}>
                   <div style={{
                     padding: "11px 16px", borderBottom: `1px solid ${C.border}`,
@@ -484,7 +536,6 @@ export default function ClientBase() {
                       ×
                     </button>
                   </div>
-
                   <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 9 }}>
                     {EXTRACT_FIELDS.map(({ key, lbl }) => {
                       const val = extracted[key];
@@ -503,18 +554,13 @@ export default function ClientBase() {
                       );
                     })}
                   </div>
-
-                  <div style={{
-                    padding: "12px 16px", borderTop: `1px solid ${C.border}`,
-                    display: "flex", gap: 8,
-                  }}>
+                  <div style={{ padding: "12px 16px", borderTop: `1px solid ${C.border}`, display: "flex", gap: 8 }}>
                     <button
                       onClick={applyExtracted}
                       style={{
                         padding: "7px 16px", borderRadius: 8, border: "none",
                         background: C.brand, color: "#fff",
-                        fontSize: 13, fontWeight: 600, fontFamily: "inherit",
-                        cursor: "pointer",
+                        fontSize: 13, fontWeight: 600, fontFamily: "inherit", cursor: "pointer",
                       }}
                     >
                       Aplicar ao formulário
@@ -524,8 +570,7 @@ export default function ClientBase() {
                       style={{
                         padding: "7px 14px", borderRadius: 8,
                         background: "none", border: `1px solid ${C.border}`,
-                        color: C.textMuted, fontSize: 13, fontFamily: "inherit",
-                        cursor: "pointer",
+                        color: C.textMuted, fontSize: 13, fontFamily: "inherit", cursor: "pointer",
                       }}
                     >
                       Descartar
@@ -575,18 +620,31 @@ export default function ClientBase() {
                 />
               </Field>
 
-              {/* ── Plataformas ── */}
-              <Field lbl="Plataformas · separadas por vírgula">
-                <input
-                  type="text"
-                  value={form.plataformas}
-                  onChange={(e) => set("plataformas", e.target.value)}
-                  onFocus={() => onFocus("plataformas")}
-                  onBlur={() => onBlur("plataformas")}
-                  placeholder="Ex: Instagram, X / Twitter, LinkedIn"
-                  style={inputStyle(focused.plataformas)}
-                />
-                <PlatformTags value={form.plataformas} />
+              {/* ── Plataformas (multi-select toggle) ── */}
+              <Field lbl="Plataformas">
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {PLATFORM_OPTIONS.map(({ label: lbl, icon }) => {
+                    const isOn = activePlatforms.has(lbl);
+                    return (
+                      <button
+                        key={lbl}
+                        onClick={() => set("plataformas", togglePlatformStr(form.plataformas, lbl))}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 7,
+                          padding: "7px 13px", borderRadius: 8,
+                          cursor: "pointer", fontFamily: "inherit",
+                          fontSize: 13, fontWeight: 500, transition: "all 0.12s",
+                          background: isOn ? C.brandDim : C.surfaceAlt,
+                          border: `1px solid ${isOn ? C.brandBorder : C.border}`,
+                          color: isOn ? "#6B9FFF" : C.textMuted,
+                        }}
+                      >
+                        <span style={{ fontWeight: 700, fontFamily: "monospace", fontSize: 12 }}>{icon}</span>
+                        {lbl}
+                      </button>
+                    );
+                  })}
+                </div>
               </Field>
 
               {/* ── Idioma por Plataforma ── */}
@@ -637,33 +695,6 @@ export default function ClientBase() {
                   </div>
                 </Field>
               )}
-
-              {/* ── Idioma (default/fallback) ── */}
-              <Field lbl="Idioma padrão">
-                <div style={{ position: "relative" }}>
-                  <select
-                    value={form.idioma}
-                    onChange={(e) => set("idioma", e.target.value)}
-                    style={{
-                      ...inputStyle(focused.idioma),
-                      appearance: "none", WebkitAppearance: "none",
-                      paddingRight: 36, cursor: "pointer",
-                    }}
-                    onFocus={() => onFocus("idioma")}
-                    onBlur={() => onBlur("idioma")}
-                  >
-                    <option value="">— selecione —</option>
-                    {IDIOMA_OPTIONS.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                  <span style={{
-                    position: "absolute", right: 12, top: "50%",
-                    transform: "translateY(-50%)",
-                    color: C.textDim, fontSize: 9, pointerEvents: "none",
-                  }}>▼</span>
-                </div>
-              </Field>
 
               {/* ── Tom de Voz ── */}
               <Field lbl="Tom de Voz">
@@ -746,7 +777,8 @@ export default function ClientBase() {
                 <div style={{
                   marginTop: 14, padding: "12px 14px", borderRadius: 9,
                   background: C.errorBg, border: `1px solid ${C.errorBorder}`,
-                  fontSize: 13, color: C.errorText,
+                  fontSize: 13, color: C.errorText, fontFamily: "monospace",
+                  lineHeight: 1.5,
                 }}>
                   {saveError}
                 </div>
