@@ -2,10 +2,12 @@ import { useState } from "react";
 import { C } from "./tokens.js";
 import MorningBriefing from "./MorningBriefing.jsx";
 import ContentMultiplier from "./ContentMultiplier.jsx";
+import ClientBase from "./ClientBase.jsx";
 
 const MODULES = [
   { id: "briefing",    label: "Morning Briefing",    icon: "☀" },
   { id: "multiplier",  label: "Content Multiplier",  icon: "⚡" },
+  { id: "clients",     label: "Client Base",         icon: "👥" },
 ];
 
 export default function App() {
@@ -79,6 +81,7 @@ export default function App() {
       {/* ── Module content ── */}
       {active === "briefing"   && <MorningBriefing />}
       {active === "multiplier" && <ContentMultiplier />}
+      {active === "clients"    && <ClientBase />}
 
     </div>
   );
