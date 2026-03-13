@@ -1,0 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --color-bg: #08080D;
+  --color-surface: #0f0f18;
+  --color-border: #14141e;
+  --color-border-subtle: #0a0a12;
+  --color-text: #D4D4D8;
+  --color-text-muted: #555;
+  --color-text-dim: #333;
+  --color-text-bright: #E4E4E7;
+
+  --color-brand: #0052FF;
+  --color-purple: #8B5CF6;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+  }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #1a1a2e; border-radius: 3px; }
+
+  select:focus, input:focus, textarea:focus, button:focus { outline: none; }
+  input[type="number"]::-webkit-inner-spin-button { opacity: 0.3; }
+}
+
+@layer utilities {
+  .font-mono { font-family: var(--font-mono); }
+  .font-sans { font-family: var(--font-sans); }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-slide-up { animation: slideUp 0.3s ease; }
+.animate-fade-in { animation: fadeIn 0.2s ease; }
