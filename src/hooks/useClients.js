@@ -41,12 +41,12 @@ const FALLBACK_CLIENTS = [
     emoji: "⛓",
     status: "Ativo",
     nicho: "Privacy payments em Base L2",
-    plataformas: "X / Twitter, Farcaster",
+    plataformas: "X/Twitter, Farcaster",
     idioma: "English only",
     tomDeVoz: "Técnico mas acessível, evita jargão desnecessário",
     restricoes: `⚠ UK compliance: NUNCA usar "rewards", "earn", "referrals" ou "investment"`,
     objetivos: "Crescimento de comunidade técnica e adoção do protocolo",
-    idiomaPorPlataforma: { "X / Twitter": "English only", "Farcaster": "English only" },
+    idiomaPorPlataforma: { "X/Twitter": "English only", "Farcaster": "English only" },
     systemContext: `Cliente: ZeroLedger — privacy payments em Base L2.
 Tom: técnico mas acessível, evita jargão desnecessário.
 ⚠ RESTRIÇÃO CRÍTICA (UK compliance): NUNCA usar as palavras "rewards", "earn", "referrals" ou "investment" em nenhuma circunstância, em nenhum idioma.
@@ -58,14 +58,14 @@ Idioma: escreva sempre em inglês (English only — no exceptions).`,
     emoji: "🏔",
     status: "Ativo",
     nicho: "Ecossistema Base no Brasil",
-    plataformas: "Instagram, X / Twitter, LinkedIn",
+    plataformas: "Instagram, X/Twitter, LinkedIn",
     idioma: "Português brasileiro",
     tomDeVoz: "Educativo, animado e próximo do público cripto brasileiro",
     restricoes: "",
     objetivos: "Educar e crescer a comunidade cripto BR, do iniciante ao avançado",
     idiomaPorPlataforma: {
       "Instagram": "Português brasileiro",
-      "X / Twitter": "Português brasileiro",
+      "X/Twitter": "Português brasileiro",
       "LinkedIn": "Português brasileiro",
     },
     systemContext: `Cliente: Base Brasil — ecossistema Base no Brasil.
@@ -80,12 +80,12 @@ Idioma: escreva sempre em português brasileiro.`,
     emoji: "🤖",
     status: "Ativo",
     nicho: "AI agents e automação",
-    plataformas: "X / Twitter, LinkedIn",
+    plataformas: "X/Twitter, LinkedIn",
     idioma: "English only",
     tomDeVoz: "Inovador, direto e orientado a resultados práticos",
     restricoes: "Sem hype vazio — foco em capacidades reais",
     objetivos: "Demonstrar capacidades reais de automação e agentes de IA",
-    idiomaPorPlataforma: { "X / Twitter": "English only", "LinkedIn": "English only" },
+    idiomaPorPlataforma: { "X/Twitter": "English only", "LinkedIn": "English only" },
     systemContext: `Cliente: ACO Labs — AI agents e automação.
 Tom: inovador, direto e orientado a resultados práticos.
 Foco: demonstrar capacidades reais de automação e agentes de IA, sem hype vazio.
@@ -97,14 +97,14 @@ Idioma: escreva sempre em inglês (English only — no exceptions).`,
     emoji: "✨",
     status: "Ativo",
     nicho: "IA generativa para criadores BR",
-    plataformas: "Instagram, X / Twitter",
+    plataformas: "Instagram, X/Twitter",
     idioma: "Português brasileiro",
     tomDeVoz: "Inspiracional, próximo e criativo",
     restricoes: "",
     objetivos: "Empoderar criadores de conteúdo brasileiros com IA no processo criativo",
     idiomaPorPlataforma: {
       "Instagram": "Português brasileiro",
-      "X / Twitter": "Português brasileiro",
+      "X/Twitter": "Português brasileiro",
     },
     systemContext: `Cliente: AURA Mode — IA generativa para criadores BR.
 Tom: inspiracional, próximo e criativo.

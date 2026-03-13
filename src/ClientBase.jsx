@@ -15,13 +15,14 @@ const STATUS_STYLE = {
 // Two options only — no mixed-language option
 const IDIOMA_OPTIONS = ["Português brasileiro", "English only"];
 
-// Ordered list of all supported platforms for toggle UI
+// Ordered list of all supported platforms for toggle UI.
+// Labels must match Notion's multi_select option names exactly.
 const PLATFORM_OPTIONS = [
-  { label: "X / Twitter", icon: "𝕏" },
-  { label: "Instagram",   icon: "◎" },
-  { label: "LinkedIn",    icon: "in" },
-  { label: "Farcaster",   icon: "⌁" },
-  { label: "Discord",     icon: "◈" },
+  { label: "X/Twitter", icon: "𝕏" },
+  { label: "Instagram",  icon: "◎" },
+  { label: "LinkedIn",   icon: "in" },
+  { label: "Farcaster",  icon: "⌁" },
+  { label: "Discord",    icon: "◈" },
 ];
 
 const EXTRACT_FIELDS = [
@@ -267,7 +268,7 @@ export default function ClientBase() {
           multi_select: form.plataformas
             .split(",").map(s => s.trim()).filter(Boolean).map(name => ({ name })),
         },
-        "Status": { status: { name: form.status } },
+        "Status": { select: { name: form.status } },
       };
 
       const res = await fetch("/api/notion", {
