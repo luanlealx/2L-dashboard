@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { C, label } from "./tokens.js";
 import { useClients } from "./hooks/useClients.js";
@@ -64,6 +64,22 @@ ${instructions}`;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+// Maps platform text values (from client profile) → PLATFORMS ids
+const PLATFORM_KEYWORDS = {
+  twitter:   ["twitter", "x /", "x/"],
+  instagram: ["instagram"],
+  linkedin:  ["linkedin"],
+  farcaster: ["farcaster"],
+};
+
+function parsePlatformsFromText(text) {
+  if (!text) return [];
+  const lower = text.toLowerCase();
+  return PLATFORMS
+    .filter(p => (PLATFORM_KEYWORDS[p.id] ?? []).some(kw => lower.includes(kw)))
+    .map(p => p.id);
+}
 
 function getFileType(file) {
   if (file.type === "application/pdf") return "pdf";
@@ -270,6 +286,12 @@ export default function ContentMultiplier() {
   const [contextFocused,  setContextFocused]  = useState(false);
   const [btnHover,        setBtnHover]        = useState(false);
   const fileInputRef = useRef(null);
+
+  // Pre-select platforms from client profile whenever the active client changes
+  useEffect(() => {
+    const derived = parsePlatformsFromText(client?.plataformas ?? "");
+    if (derived.length > 0) setPlatforms(derived);
+  }, [client?.id]);
 
   function addFiles(fileList) {
     const valid = Array.from(fileList).filter(f => getFileType(f) !== null);

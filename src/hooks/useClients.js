@@ -9,6 +9,31 @@ const EMOJI_MAP = {
   "AURA Mode":   "✨",
 };
 
+// ─── Idioma per-platform helpers (also used by ClientBase) ────────────────────
+
+export function parseIdiomaPerPlatform(text) {
+  if (!text) return {};
+  const result = {};
+  text.split("|").forEach(pair => {
+    const idx = pair.indexOf(":");
+    if (idx > -1) {
+      const k = pair.slice(0, idx).trim();
+      const v = pair.slice(idx + 1).trim();
+      if (k && v) result[k] = v;
+    }
+  });
+  return result;
+}
+
+export function serializeIdiomaPerPlatform(obj) {
+  return Object.entries(obj || {})
+    .filter(([, v]) => v)
+    .map(([k, v]) => `${k}: ${v}`)
+    .join(" | ");
+}
+
+// ─── Fallback data ────────────────────────────────────────────────────────────
+
 const FALLBACK_CLIENTS = [
   {
     id: "zeroledger",
@@ -21,6 +46,7 @@ const FALLBACK_CLIENTS = [
     tomDeVoz: "Técnico mas acessível, evita jargão desnecessário",
     restricoes: `⚠ UK compliance: NUNCA usar "rewards", "earn", "referrals" ou "investment"`,
     objetivos: "Crescimento de comunidade técnica e adoção do protocolo",
+    idiomaPorPlataforma: { "X / Twitter": "English only", "Farcaster": "English only" },
     systemContext: `Cliente: ZeroLedger — privacy payments em Base L2.
 Tom: técnico mas acessível, evita jargão desnecessário.
 ⚠ RESTRIÇÃO CRÍTICA (UK compliance): NUNCA usar as palavras "rewards", "earn", "referrals" ou "investment" em nenhuma circunstância, em nenhum idioma.
@@ -37,6 +63,11 @@ Idioma: escreva sempre em inglês (English only — no exceptions).`,
     tomDeVoz: "Educativo, animado e próximo do público cripto brasileiro",
     restricoes: "",
     objetivos: "Educar e crescer a comunidade cripto BR, do iniciante ao avançado",
+    idiomaPorPlataforma: {
+      "Instagram": "Português brasileiro",
+      "X / Twitter": "Português brasileiro",
+      "LinkedIn": "Português brasileiro",
+    },
     systemContext: `Cliente: Base Brasil — ecossistema Base no Brasil.
 Tom: educativo, animado e próximo do público cripto brasileiro.
 Público: comunidade cripto BR, desde iniciantes até usuários avançados.
@@ -54,6 +85,7 @@ Idioma: escreva sempre em português brasileiro.`,
     tomDeVoz: "Inovador, direto e orientado a resultados práticos",
     restricoes: "Sem hype vazio — foco em capacidades reais",
     objetivos: "Demonstrar capacidades reais de automação e agentes de IA",
+    idiomaPorPlataforma: { "X / Twitter": "English only", "LinkedIn": "English only" },
     systemContext: `Cliente: ACO Labs — AI agents e automação.
 Tom: inovador, direto e orientado a resultados práticos.
 Foco: demonstrar capacidades reais de automação e agentes de IA, sem hype vazio.
@@ -70,6 +102,10 @@ Idioma: escreva sempre em inglês (English only — no exceptions).`,
     tomDeVoz: "Inspiracional, próximo e criativo",
     restricoes: "",
     objetivos: "Empoderar criadores de conteúdo brasileiros com IA no processo criativo",
+    idiomaPorPlataforma: {
+      "Instagram": "Português brasileiro",
+      "X / Twitter": "Português brasileiro",
+    },
     systemContext: `Cliente: AURA Mode — IA generativa para criadores BR.
 Tom: inspiracional, próximo e criativo.
 Público: criadores de conteúdo brasileiros que usam (ou querem usar) IA no processo criativo.
@@ -77,6 +113,8 @@ Celebra a criatividade humana potencializada por IA.
 Idioma: escreva sempre em português brasileiro.`,
   },
 ];
+
+// ─── Notion parsing ───────────────────────────────────────────────────────────
 
 function getProp(props, ...keys) {
   for (const key of keys) {
@@ -116,6 +154,9 @@ function parseClient(page) {
   const restricoes = getText(getProp(props, "Restrições", "Restricoes", "restricoes"));
   const objetivos  = getText(getProp(props, "Objetivos", "objetivos"));
   const status     = getText(getProp(props, "Status", "status")) || "Ativo";
+  const idiomaPorPlataforma = parseIdiomaPerPlatform(
+    getText(getProp(props, "Idioma por Plataforma", "idiomaPorPlataforma"))
+  );
 
   return {
     id: page.id,
@@ -128,9 +169,12 @@ function parseClient(page) {
     tomDeVoz,
     restricoes,
     objetivos,
+    idiomaPorPlataforma,
     systemContext: buildSystemContext({ name, nicho, plataformas, idioma, tomDeVoz, restricoes, objetivos }),
   };
 }
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useClients() {
   const [clients, setClients] = useState(FALLBACK_CLIENTS);
