@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import * as XLSX from "xlsx";
 import { C, label } from "./tokens.js";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -10,7 +11,8 @@ const CLIENTS = [
     emoji: "⛓",
     systemContext: `Cliente: ZeroLedger — privacy payments em Base L2.
 Tom: técnico mas acessível, evita jargão desnecessário.
-⚠ RESTRIÇÃO CRÍTICA (UK compliance): NUNCA usar as palavras "rewards", "earn", "referrals" ou "investment" em nenhuma circunstância, em nenhum idioma.`,
+⚠ RESTRIÇÃO CRÍTICA (UK compliance): NUNCA usar as palavras "rewards", "earn", "referrals" ou "investment" em nenhuma circunstância, em nenhum idioma.
+Idioma: escreva sempre em inglês (English only — no exceptions).`,
   },
   {
     id: "base-brasil",
@@ -19,7 +21,8 @@ Tom: técnico mas acessível, evita jargão desnecessário.
     systemContext: `Cliente: Base Brasil — ecossistema Base no Brasil.
 Tom: educativo, animado e próximo do público cripto brasileiro.
 Público: comunidade cripto BR, desde iniciantes até usuários avançados.
-Use português BR natural, pode usar gírias do universo cripto quando apropriado.`,
+Use português BR natural, pode usar gírias do universo cripto quando apropriado.
+Idioma: escreva sempre em português brasileiro.`,
   },
   {
     id: "aco-labs",
@@ -27,7 +30,8 @@ Use português BR natural, pode usar gírias do universo cripto quando apropriad
     emoji: "🤖",
     systemContext: `Cliente: ACO Labs — AI agents e automação.
 Tom: inovador, direto e orientado a resultados práticos.
-Foco: demonstrar capacidades reais de automação e agentes de IA, sem hype vazio.`,
+Foco: demonstrar capacidades reais de automação e agentes de IA, sem hype vazio.
+Idioma: escreva sempre em inglês (English only — no exceptions).`,
   },
   {
     id: "aura-mode",
@@ -36,7 +40,8 @@ Foco: demonstrar capacidades reais de automação e agentes de IA, sem hype vazi
     systemContext: `Cliente: AURA Mode — IA generativa para criadores BR.
 Tom: inspiracional, próximo e criativo.
 Público: criadores de conteúdo brasileiros que usam (ou querem usar) IA no processo criativo.
-Celebra a criatividade humana potencializada por IA.`,
+Celebra a criatividade humana potencializada por IA.
+Idioma: escreva sempre em português brasileiro.`,
   },
 ];
 
@@ -61,6 +66,13 @@ const PLATFORMS = [
     icon: "in",
     hint: "tom profissional",
     instructions: `- LinkedIn: abertura com gancho forte (primeira linha sem contexto extra), 3-4 parágrafos curtos com insight de valor, tom profissional mas humano. Termine com pergunta ou CTA. 3-5 hashtags no final.`,
+  },
+  {
+    id: "farcaster",
+    label: "Farcaster",
+    icon: "⌁",
+    hint: "320 chars · web3",
+    instructions: `- Farcaster: cast de até 320 caracteres. Tom nativo web3 — conciso, direto, sem hashtags. Pode referenciar cultura onchain quando relevante. Sem emojis em excesso. Fala com uma audiência que já entende crypto.`,
   },
 ];
 
@@ -93,7 +105,28 @@ ${instructions}`;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function readFileAsBase64(file) {
+function getFileType(file) {
+  if (file.type === "application/pdf") return "pdf";
+  if (file.type.startsWith("image/")) return "image";
+  if (file.type === "text/csv" || file.name.endsWith(".csv")) return "csv";
+  if (
+    file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    file.type === "application/vnd.ms-excel" ||
+    file.name.endsWith(".xlsx") ||
+    file.name.endsWith(".xls")
+  ) return "xlsx";
+  return null;
+}
+
+function fileIcon(file) {
+  const t = getFileType(file);
+  if (t === "pdf") return "📄";
+  if (t === "image") return "🖼";
+  if (t === "csv" || t === "xlsx") return "📊";
+  return "📎";
+}
+
+function readAsBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result.split(",")[1]);
@@ -102,13 +135,40 @@ function readFileAsBase64(file) {
   });
 }
 
+function readAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsText(file, "utf-8");
+  });
+}
+
+function readXlsxAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: "array" });
+        const text = wb.SheetNames.map((name) => {
+          const csv = XLSX.utils.sheet_to_csv(wb.Sheets[name]);
+          return wb.SheetNames.length > 1 ? `[${name}]\n${csv}` : csv;
+        }).join("\n\n");
+        resolve(text);
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
-
-const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp", "image/gif"];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -250,7 +310,7 @@ export default function ContentMultiplier() {
   const fileInputRef = useRef(null);
 
   function addFiles(fileList) {
-    const valid = Array.from(fileList).filter(f => ACCEPTED_TYPES.includes(f.type));
+    const valid = Array.from(fileList).filter(f => getFileType(f) !== null);
     setFiles(prev => [...prev, ...valid].slice(0, 5));
   }
 
@@ -275,11 +335,19 @@ export default function ContentMultiplier() {
       const content = [];
 
       for (const file of files) {
-        const data = await readFileAsBase64(file);
-        if (file.type === "application/pdf") {
+        const ft = getFileType(file);
+        if (ft === "pdf") {
+          const data = await readAsBase64(file);
           content.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data } });
-        } else {
+        } else if (ft === "image") {
+          const data = await readAsBase64(file);
           content.push({ type: "image", source: { type: "base64", media_type: file.type, data } });
+        } else if (ft === "csv") {
+          const text = await readAsText(file);
+          content.push({ type: "text", text: `Dados tabulares (${file.name}):\n\n${text}` });
+        } else if (ft === "xlsx") {
+          const text = await readXlsxAsText(file);
+          content.push({ type: "text", text: `Dados tabulares (${file.name}):\n\n${text}` });
         }
       }
 
@@ -365,7 +433,7 @@ export default function ContentMultiplier() {
         <label style={{ ...label, color: C.textDim }}>
           Arquivos{" "}
           <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
-            · PDF, PNG, JPG, WEBP · máx. 5
+            · PDF, PNG, JPG, WEBP, CSV, XLSX · máx. 5
           </span>
         </label>
 
@@ -388,13 +456,13 @@ export default function ContentMultiplier() {
             Clique para selecionar ou arraste aqui
           </p>
           <p style={{ fontSize: 11, color: C.textDim, marginTop: 4, fontFamily: "monospace" }}>
-            PDF · PNG · JPG · WEBP
+            PDF · PNG · JPG · WEBP · CSV · XLSX
           </p>
           <input
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".pdf,image/jpeg,image/png,image/webp"
+            accept=".pdf,image/jpeg,image/png,image/webp,.csv,.xlsx,.xls"
             style={{ display: "none" }}
             onChange={(e) => addFiles(e.target.files)}
           />
@@ -410,9 +478,7 @@ export default function ContentMultiplier() {
                 background: C.surface, border: `1px solid ${C.border}`,
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, overflow: "hidden" }}>
-                  <span style={{ fontSize: 14, flexShrink: 0 }}>
-                    {f.type === "application/pdf" ? "📄" : "🖼"}
-                  </span>
+                  <span style={{ fontSize: 14, flexShrink: 0 }}>{fileIcon(f)}</span>
                   <span style={{ fontSize: 13, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {f.name}
                   </span>
