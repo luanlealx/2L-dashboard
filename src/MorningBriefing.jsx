@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { C, label } from "./tokens.js";
-
-const CLIENTS = [
-  { id: "zeroledger",  name: "ZeroLedger",  emoji: "⛓" },
-  { id: "base-brasil", name: "Base Brasil", emoji: "🏔" },
-  { id: "aco-labs",    name: "ACO Labs",    emoji: "🤖" },
-  { id: "aura-mode",   name: "AURA Mode",   emoji: "✨" },
-];
+import { useClients } from "./hooks/useClients.js";
 
 function buildPrompt(clientName, metrics) {
   return `Você é o assistente operacional da agência 2L Digital. Com base nas métricas da semana abaixo, gere um briefing de prioridades para hoje.
@@ -79,7 +73,9 @@ function BriefingContent({ text }) {
 }
 
 export default function MorningBriefing() {
-  const [client,         setClient]         = useState(CLIENTS[0]);
+  const { clients } = useClients();
+  const [clientId,       setClientId]       = useState(null);
+  const client = clients.find(c => c.id === clientId) ?? clients[0];
   const [metrics,        setMetrics]        = useState("");
   const [briefing,       setBriefing]       = useState(null);
   const [loading,        setLoading]        = useState(false);
@@ -138,12 +134,12 @@ export default function MorningBriefing() {
       <div style={{ marginBottom: 28 }}>
         <label style={{ ...label, color: C.textDim }}>Cliente</label>
         <div style={{ display: "flex", gap: 6, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {CLIENTS.map((c) => {
+          {clients.map((c) => {
             const active = client.id === c.id;
             return (
               <button
                 key={c.id}
-                onClick={() => { setClient(c); setBriefing(null); setError(null); }}
+                onClick={() => { setClientId(c.id); setBriefing(null); setError(null); }}
                 style={{
                   display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
                   padding: "7px 12px", borderRadius: 8, cursor: "pointer",

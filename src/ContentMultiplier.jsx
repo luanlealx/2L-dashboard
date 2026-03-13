@@ -1,49 +1,9 @@
 import { useState, useRef } from "react";
 import * as XLSX from "xlsx";
 import { C, label } from "./tokens.js";
+import { useClients } from "./hooks/useClients.js";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-
-const CLIENTS = [
-  {
-    id: "zeroledger",
-    name: "ZeroLedger",
-    emoji: "⛓",
-    systemContext: `Cliente: ZeroLedger — privacy payments em Base L2.
-Tom: técnico mas acessível, evita jargão desnecessário.
-⚠ RESTRIÇÃO CRÍTICA (UK compliance): NUNCA usar as palavras "rewards", "earn", "referrals" ou "investment" em nenhuma circunstância, em nenhum idioma.
-Idioma: escreva sempre em inglês (English only — no exceptions).`,
-  },
-  {
-    id: "base-brasil",
-    name: "Base Brasil",
-    emoji: "🏔",
-    systemContext: `Cliente: Base Brasil — ecossistema Base no Brasil.
-Tom: educativo, animado e próximo do público cripto brasileiro.
-Público: comunidade cripto BR, desde iniciantes até usuários avançados.
-Use português BR natural, pode usar gírias do universo cripto quando apropriado.
-Idioma: escreva sempre em português brasileiro.`,
-  },
-  {
-    id: "aco-labs",
-    name: "ACO Labs",
-    emoji: "🤖",
-    systemContext: `Cliente: ACO Labs — AI agents e automação.
-Tom: inovador, direto e orientado a resultados práticos.
-Foco: demonstrar capacidades reais de automação e agentes de IA, sem hype vazio.
-Idioma: escreva sempre em inglês (English only — no exceptions).`,
-  },
-  {
-    id: "aura-mode",
-    name: "AURA Mode",
-    emoji: "✨",
-    systemContext: `Cliente: AURA Mode — IA generativa para criadores BR.
-Tom: inspiracional, próximo e criativo.
-Público: criadores de conteúdo brasileiros que usam (ou querem usar) IA no processo criativo.
-Celebra a criatividade humana potencializada por IA.
-Idioma: escreva sempre em português brasileiro.`,
-  },
-];
 
 const PLATFORMS = [
   {
@@ -296,7 +256,9 @@ function ResultCards({ text }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ContentMultiplier() {
-  const [client,          setClient]          = useState(CLIENTS[0]);
+  const { clients } = useClients();
+  const [clientId,        setClientId]        = useState(null);
+  const client = clients.find(c => c.id === clientId) ?? clients[0];
   const [files,           setFiles]           = useState([]);
   const [context,         setContext]         = useState("");
   const [platforms,       setPlatforms]       = useState(["instagram"]);
@@ -397,12 +359,12 @@ export default function ContentMultiplier() {
       <div style={{ marginBottom: 28 }}>
         <label style={{ ...label, color: C.textDim }}>Cliente</label>
         <div style={{ display: "flex", gap: 6, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
-          {CLIENTS.map((c) => {
+          {clients.map((c) => {
             const active = client.id === c.id;
             return (
               <button
                 key={c.id}
-                onClick={() => { setClient(c); setResult(null); setError(null); }}
+                onClick={() => { setClientId(c.id); setResult(null); setError(null); }}
                 style={{
                   display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
                   padding: "7px 12px", borderRadius: 8, cursor: "pointer",
