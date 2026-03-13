@@ -1,6 +1,28 @@
 import { useState } from "react";
 
-// ─── Data ────────────────────────────────────────────────────────────────────
+// ─── Design tokens ────────────────────────────────────────────────────────────
+
+const C = {
+  bg:           "#08080D",
+  surface:      "#0f0f18",
+  surfaceAlt:   "#0b0b14",
+  border:       "#1c1c2e",
+  borderHover:  "#2a2a3e",
+  text:         "#C4C4C8",
+  textBright:   "#F0F0F2",
+  textMuted:    "#666",
+  textDim:      "#333",
+  brand:        "#0052FF",
+  brandHover:   "#0047E0",
+  brandDim:     "rgba(0,82,255,0.12)",
+  brandBorder:  "rgba(0,82,255,0.35)",
+  purple:       "#8B5CF6",
+  errorText:    "#F87171",
+  errorBg:      "rgba(127,29,29,0.25)",
+  errorBorder:  "rgba(153,27,27,0.4)",
+};
+
+// ─── Data ─────────────────────────────────────────────────────────────────────
 
 const CLIENTS = [
   { id: "zeroledger",  name: "ZeroLedger",  emoji: "⛓" },
@@ -30,106 +52,71 @@ As 3 ações de maior impacto, em ordem de prioridade
 Uma única coisa para executar nos próximos 30 minutos`;
 }
 
-// ─── Icons ───────────────────────────────────────────────────────────────────
-
-function SunIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="5"/>
-      <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-    </svg>
-  );
-}
-
-function MoonIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-    </svg>
-  );
-}
-
-function ArrowIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="5" y1="12" x2="19" y2="12"/>
-      <polyline points="12 5 19 12 12 19"/>
-    </svg>
-  );
-}
-
-// ─── Briefing renderer ───────────────────────────────────────────────────────
+// ─── Inline markdown renderer ─────────────────────────────────────────────────
 
 function renderInline(text) {
   return text.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
-    part.startsWith("**") && part.endsWith("**") ? (
-      <strong key={i} className="text-gray-900 dark:text-[#E4E4E7] font-semibold">
-        {part.slice(2, -2)}
-      </strong>
-    ) : part
+    part.startsWith("**") && part.endsWith("**")
+      ? <strong key={i} style={{ color: C.textBright, fontWeight: 600 }}>{part.slice(2, -2)}</strong>
+      : part
   );
 }
 
 function BriefingContent({ text }) {
   return (
-    <div className="space-y-0.5 text-sm leading-relaxed">
+    <div style={{ fontSize: 14, lineHeight: 1.7 }}>
       {text.split("\n").map((line, i) => {
         if (line.startsWith("## ")) {
           return (
-            <h3 key={i} className="text-gray-900 dark:text-[#E4E4E7] font-semibold text-[15px] mt-7 first:mt-0 mb-2.5 flex items-center gap-2">
-              <span className="w-1 h-4 rounded-full bg-[#0052FF] shrink-0" />
-              {line.replace("## ", "")}
-            </h3>
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginTop: i === 0 ? 0 : 28, marginBottom: 10 }}>
+              <span style={{ width: 3, height: 16, borderRadius: 2, background: C.brand, flexShrink: 0, display: "inline-block" }} />
+              <h3 style={{ color: C.textBright, fontWeight: 600, fontSize: 15 }}>
+                {line.replace("## ", "")}
+              </h3>
+            </div>
           );
         }
         if (line.startsWith("- ") || line.startsWith("• ")) {
           return (
-            <div key={i} className="flex gap-2.5 text-gray-600 dark:text-[#A1A1AA] py-0.5 pl-3">
-              <span className="text-[#0052FF] shrink-0 mt-0.5 font-bold text-xs">›</span>
+            <div key={i} style={{ display: "flex", gap: 10, color: C.text, paddingLeft: 13, paddingTop: 3 }}>
+              <span style={{ color: C.brand, fontWeight: 700, fontSize: 12, marginTop: 2, flexShrink: 0 }}>›</span>
               <span>{renderInline(line.replace(/^[-•]\s/, ""))}</span>
             </div>
           );
         }
         if (line.match(/^\d+\.\s/)) {
           return (
-            <div key={i} className="flex gap-2.5 text-gray-600 dark:text-[#A1A1AA] py-0.5 pl-3">
-              <span className="text-[#0052FF] shrink-0 font-mono text-xs mt-0.5 w-3">
+            <div key={i} style={{ display: "flex", gap: 10, color: C.text, paddingLeft: 13, paddingTop: 3 }}>
+              <span style={{ color: C.brand, fontFamily: "monospace", fontSize: 12, marginTop: 2, flexShrink: 0, minWidth: 14 }}>
                 {line.match(/^\d+/)?.[0]}.
               </span>
               <span>{renderInline(line.replace(/^\d+\.\s/, ""))}</span>
             </div>
           );
         }
-        if (line.trim() === "") return <div key={i} className="h-1.5" />;
-        return (
-          <p key={i} className="text-gray-600 dark:text-[#A1A1AA] pl-3">
-            {renderInline(line)}
-          </p>
-        );
+        if (line.trim() === "") return <div key={i} style={{ height: 6 }} />;
+        return <p key={i} style={{ color: C.text, paddingLeft: 13 }}>{renderInline(line)}</p>;
       })}
     </div>
   );
 }
 
-// ─── App ─────────────────────────────────────────────────────────────────────
+// ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [isDark,   setIsDark]   = useState(true);
-  const [client,   setClient]   = useState(CLIENTS[0]);
-  const [metrics,  setMetrics]  = useState("");
-  const [briefing, setBriefing] = useState(null);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState(null);
+  const [client,        setClient]        = useState(CLIENTS[0]);
+  const [metrics,       setMetrics]       = useState("");
+  const [briefing,      setBriefing]      = useState(null);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState(null);
+  const [metricsFocused, setMetricsFocused] = useState(false);
+  const [btnHover,      setBtnHover]      = useState(false);
 
   async function handleGenerate() {
     if (!metrics.trim() || loading) return;
     setLoading(true);
     setError(null);
     setBriefing(null);
-
     try {
       const res = await fetch("/api/claude", {
         method: "POST",
@@ -140,12 +127,10 @@ export default function App() {
           messages: [{ role: "user", content: buildPrompt(client.name, metrics) }],
         }),
       });
-
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || `Erro ${res.status}`);
       }
-
       const data = await res.json();
       setBriefing(data?.content?.[0]?.text ?? "Resposta vazia.");
     } catch (err) {
@@ -159,156 +144,178 @@ export default function App() {
     weekday: "long", day: "numeric", month: "long",
   });
 
-  return (
-    <div className={isDark ? "dark" : ""}>
-      <div className="min-h-screen bg-gray-50 dark:bg-[#08080D] transition-colors duration-200 font-[Outfit,sans-serif]">
-        <div className="max-w-[640px] mx-auto px-6 py-12">
+  const canGenerate = !loading && metrics.trim().length > 0;
 
-          {/* ── Header ── */}
-          <div className="flex items-start justify-between mb-12">
-            <div>
-              <div className="flex items-center gap-2.5 mb-5">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#0052FF] to-[#8B5CF6] flex items-center justify-center text-white text-[10px] font-bold tracking-tight">
-                  2L
-                </div>
-                <span className="text-[10px] font-mono tracking-[0.2em] text-gray-400 dark:text-[#333] uppercase">
-                  Agency Autopilot
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg }}>
+      <div style={{ maxWidth: 620, margin: "0 auto", padding: "48px 24px 80px" }}>
+
+        {/* ── Header ── */}
+        <div style={{ marginBottom: 44 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+              background: `linear-gradient(135deg, ${C.brand}, ${C.purple})`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#fff", fontSize: 10, fontWeight: 700, letterSpacing: "0.04em",
+            }}>2L</div>
+            <span style={{ fontSize: 10, fontFamily: "monospace", letterSpacing: "0.2em", color: C.textDim, textTransform: "uppercase" }}>
+              Agency Autopilot
+            </span>
+          </div>
+          <h1 style={{ fontSize: 30, fontWeight: 700, color: C.textBright, letterSpacing: "-0.02em", lineHeight: 1 }}>
+            Morning Briefing
+          </h1>
+          <p style={{ fontSize: 13, color: C.textMuted, marginTop: 8, textTransform: "capitalize" }}>
+            {today}
+          </p>
+        </div>
+
+        {/* ── Client selector ── */}
+        <div style={{ marginBottom: 28 }}>
+          <label style={{ display: "block", fontSize: 10, fontFamily: "monospace", letterSpacing: "0.18em", color: C.textDim, textTransform: "uppercase", marginBottom: 12 }}>
+            Cliente
+          </label>
+          <div style={{ display: "flex", gap: 8 }}>
+            {CLIENTS.map((c) => {
+              const active = client.id === c.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => { setClient(c); setBriefing(null); setError(null); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "10px 20px", borderRadius: 10, cursor: "pointer",
+                    fontSize: 14, fontWeight: 500, fontFamily: "inherit",
+                    transition: "all 0.15s",
+                    ...(active ? {
+                      background: C.brand,
+                      border: `1px solid ${C.brand}`,
+                      color: "#fff",
+                      boxShadow: `0 4px 20px rgba(0,82,255,0.35)`,
+                    } : {
+                      background: C.surface,
+                      border: `1px solid ${C.border}`,
+                      color: C.textMuted,
+                    }),
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>{c.emoji}</span>
+                  <span>{c.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Metrics textarea ── */}
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: "block", fontSize: 10, fontFamily: "monospace", letterSpacing: "0.18em", color: C.textDim, textTransform: "uppercase", marginBottom: 12 }}>
+            Métricas da semana
+          </label>
+          <textarea
+            value={metrics}
+            onChange={(e) => setMetrics(e.target.value)}
+            onFocus={() => setMetricsFocused(true)}
+            onBlur={() => setMetricsFocused(false)}
+            placeholder={"Cole aqui as métricas da semana:\n\nEx: alcance 12k (+8%), engajamento 4.2%,\n8 leads, 2 fechamentos, CPL R$32..."}
+            rows={7}
+            style={{
+              width: "100%", display: "block",
+              background: C.surfaceAlt,
+              border: `1px solid ${metricsFocused ? C.brand : C.border}`,
+              borderRadius: 12, padding: "14px 16px",
+              fontSize: 14, lineHeight: 1.65,
+              color: C.textBright,
+              resize: "none", fontFamily: "inherit",
+              transition: "border-color 0.15s",
+              boxShadow: metricsFocused ? `0 0 0 3px rgba(0,82,255,0.1)` : "none",
+            }}
+          />
+        </div>
+
+        {/* ── Generate button ── */}
+        <button
+          onClick={handleGenerate}
+          disabled={!canGenerate}
+          onMouseEnter={() => setBtnHover(true)}
+          onMouseLeave={() => setBtnHover(false)}
+          style={{
+            width: "100%", padding: "14px 24px",
+            borderRadius: 12, border: "none", cursor: canGenerate ? "pointer" : "not-allowed",
+            fontSize: 15, fontWeight: 600, fontFamily: "inherit",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            transition: "all 0.15s",
+            ...(canGenerate ? {
+              background: btnHover ? C.brandHover : C.brand,
+              color: "#fff",
+              boxShadow: btnHover
+                ? "0 6px 28px rgba(0,82,255,0.45)"
+                : "0 4px 20px rgba(0,82,255,0.3)",
+            } : {
+              background: C.surface,
+              color: C.textDim,
+              border: `1px solid ${C.border}`,
+              boxShadow: "none",
+            }),
+          }}
+        >
+          {loading ? (
+            <>
+              <svg className="spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25"/>
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+              </svg>
+              Gerando briefing...
+            </>
+          ) : (
+            <>
+              Gerar Briefing
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <polyline points="12 5 19 12 12 19"/>
+              </svg>
+            </>
+          )}
+        </button>
+
+        {/* ── Error ── */}
+        {error && (
+          <div style={{
+            marginTop: 16, padding: "14px 16px", borderRadius: 10,
+            background: C.errorBg, border: `1px solid ${C.errorBorder}`,
+            color: C.errorText, fontSize: 13,
+          }}>
+            {error}
+          </div>
+        )}
+
+        {/* ── Briefing output ── */}
+        {briefing && (
+          <div className="slide-up" style={{ marginTop: 36 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.brand, display: "inline-block" }} />
+                <span style={{ fontSize: 10, fontFamily: "monospace", letterSpacing: "0.18em", color: C.brand, textTransform: "uppercase" }}>
+                  Briefing — {client.name}
                 </span>
               </div>
-              <h1 className="text-[28px] font-semibold tracking-tight text-gray-950 dark:text-[#F4F4F5] leading-none">
-                Morning Briefing
-              </h1>
-              <p className="text-sm text-gray-400 dark:text-[#444] mt-2 capitalize">{today}</p>
+              <button
+                onClick={() => setBriefing(null)}
+                style={{ fontSize: 12, color: C.textDim, background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+              >
+                limpar
+              </button>
             </div>
-
-            {/* Theme toggle */}
-            <button
-              onClick={() => setIsDark(!isDark)}
-              title={isDark ? "Modo claro" : "Modo escuro"}
-              className="mt-0.5 w-8 h-8 flex items-center justify-center rounded-lg transition-all
-                bg-white dark:bg-[#0f0f18]
-                border border-gray-200 dark:border-[#1c1c28]
-                text-gray-400 dark:text-[#555]
-                hover:text-gray-700 dark:hover:text-[#A1A1AA]
-                hover:border-gray-300 dark:hover:border-[#2a2a3a]
-                shadow-sm"
-            >
-              {isDark ? <SunIcon /> : <MoonIcon />}
-            </button>
-          </div>
-
-          {/* ── Client selector ── */}
-          <div className="mb-8">
-            <label className="block text-[10px] font-mono tracking-[0.18em] text-gray-400 dark:text-[#333] uppercase mb-3">
-              Cliente
-            </label>
-            <div className="flex gap-2">
-              {CLIENTS.map((c) => {
-                const active = client.id === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => { setClient(c); setBriefing(null); setError(null); }}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      active
-                        ? "bg-[#0052FF] text-white shadow-lg shadow-[#0052FF]/30 scale-[1.02]"
-                        : "bg-white dark:bg-[#0f0f18] border border-gray-200 dark:border-[#1c1c28] text-gray-500 dark:text-[#555] hover:text-gray-800 dark:hover:text-[#A1A1AA] hover:border-gray-300 dark:hover:border-[#2a2a3a] shadow-sm"
-                    }`}
-                  >
-                    <span className="text-base leading-none">{c.emoji}</span>
-                    <span>{c.name}</span>
-                  </button>
-                );
-              })}
+            <div style={{
+              background: C.surfaceAlt, border: `1px solid ${C.border}`,
+              borderRadius: 14, padding: "24px 24px 28px",
+            }}>
+              <BriefingContent text={briefing} />
             </div>
           </div>
+        )}
 
-          {/* ── Metrics textarea ── */}
-          <div className="mb-7">
-            <label className="block text-[10px] font-mono tracking-[0.18em] text-gray-400 dark:text-[#333] uppercase mb-3">
-              Métricas da semana
-            </label>
-            <textarea
-              value={metrics}
-              onChange={(e) => setMetrics(e.target.value)}
-              placeholder={"Cole aqui as métricas da semana:\n\nEx: alcance 12k (+8%), engajamento 4.2%,\n8 leads, 2 fechamentos, CPL R$32..."}
-              rows={7}
-              className="w-full rounded-xl px-4 py-3.5 text-[15px] leading-relaxed resize-none transition-all
-                bg-white dark:bg-[#0b0b14]
-                border border-gray-200 dark:border-[#1c1c28]
-                text-gray-800 dark:text-[#D4D4D8]
-                placeholder-gray-300 dark:placeholder-[#252535]
-                hover:border-gray-300 dark:hover:border-[#252535]
-                focus:border-[#0052FF] dark:focus:border-[#0052FF80]
-                focus:ring-3 focus:ring-[#0052FF]/10
-                shadow-sm"
-            />
-          </div>
-
-          {/* ── Generate button ── */}
-          <button
-            onClick={handleGenerate}
-            disabled={loading || !metrics.trim()}
-            className="w-full py-3.5 rounded-xl text-[15px] font-semibold transition-all
-              bg-[#0052FF] hover:bg-[#0047E0] active:scale-[0.99]
-              text-white shadow-lg shadow-[#0052FF]/30 hover:shadow-[#0052FF]/40
-              disabled:bg-gray-100 dark:disabled:bg-[#0f0f18]
-              disabled:text-gray-300 dark:disabled:text-[#252535]
-              disabled:border disabled:border-gray-200 dark:disabled:border-[#1c1c28]
-              disabled:shadow-none disabled:cursor-not-allowed disabled:scale-100"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                </svg>
-                Gerando briefing...
-              </span>
-            ) : (
-              <span className="flex items-center justify-center gap-2">
-                Gerar Briefing
-                <ArrowIcon />
-              </span>
-            )}
-          </button>
-
-          {/* ── Error ── */}
-          {error && (
-            <div className="mt-4 p-4 rounded-xl text-sm
-              bg-red-50 dark:bg-red-950/30
-              border border-red-200 dark:border-red-900/50
-              text-red-600 dark:text-red-400">
-              {error}
-            </div>
-          )}
-
-          {/* ── Briefing output ── */}
-          {briefing && (
-            <div className="mt-10 animate-slide-up">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#0052FF]" />
-                  <span className="text-[10px] font-mono tracking-[0.18em] text-[#0052FF] uppercase">
-                    Briefing — {client.name}
-                  </span>
-                </div>
-                <button
-                  onClick={() => setBriefing(null)}
-                  className="text-xs text-gray-300 dark:text-[#2a2a3a] hover:text-gray-500 dark:hover:text-[#666] transition-colors"
-                >
-                  limpar
-                </button>
-              </div>
-              <div className="rounded-xl p-6 shadow-sm
-                bg-white dark:bg-[#0b0b14]
-                border border-gray-200 dark:border-[#1c1c28]">
-                <BriefingContent text={briefing} />
-              </div>
-            </div>
-          )}
-
-        </div>
       </div>
     </div>
   );
