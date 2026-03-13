@@ -3,6 +3,43 @@ import { C, label } from "./tokens.js";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
+const CLIENTS = [
+  {
+    id: "zeroledger",
+    name: "ZeroLedger",
+    emoji: "⛓",
+    systemContext: `Cliente: ZeroLedger — privacy payments em Base L2.
+Tom: técnico mas acessível, evita jargão desnecessário.
+⚠ RESTRIÇÃO CRÍTICA (UK compliance): NUNCA usar as palavras "rewards", "earn", "referrals" ou "investment" em nenhuma circunstância, em nenhum idioma.`,
+  },
+  {
+    id: "base-brasil",
+    name: "Base Brasil",
+    emoji: "🏔",
+    systemContext: `Cliente: Base Brasil — ecossistema Base no Brasil.
+Tom: educativo, animado e próximo do público cripto brasileiro.
+Público: comunidade cripto BR, desde iniciantes até usuários avançados.
+Use português BR natural, pode usar gírias do universo cripto quando apropriado.`,
+  },
+  {
+    id: "aco-labs",
+    name: "ACO Labs",
+    emoji: "🤖",
+    systemContext: `Cliente: ACO Labs — AI agents e automação.
+Tom: inovador, direto e orientado a resultados práticos.
+Foco: demonstrar capacidades reais de automação e agentes de IA, sem hype vazio.`,
+  },
+  {
+    id: "aura-mode",
+    name: "AURA Mode",
+    emoji: "✨",
+    systemContext: `Cliente: AURA Mode — IA generativa para criadores BR.
+Tom: inspiracional, próximo e criativo.
+Público: criadores de conteúdo brasileiros que usam (ou querem usar) IA no processo criativo.
+Celebra a criatividade humana potencializada por IA.`,
+  },
+];
+
 const PLATFORMS = [
   {
     id: "twitter",
@@ -27,11 +64,15 @@ const PLATFORMS = [
   },
 ];
 
-const SYSTEM_PROMPT = `Você é um especialista em copywriting e adaptação de conteúdo para redes sociais da agência 2L Digital.
+function buildSystemPrompt(client) {
+  return `Você é um especialista em copywriting e adaptação de conteúdo para redes sociais da agência 2L Digital.
+
+${client.systemContext}
 
 Sua tarefa é analisar o conteúdo fornecido (arquivos, imagens ou texto) e criar versões adaptadas e prontas para publicar em cada plataforma solicitada.
 
 Entregue apenas os textos finais, sem explicações, introduções ou meta-comentários. O output deve ser copiável e publicável diretamente.`;
+}
 
 function buildUserPrompt(selectedPlatforms, context) {
   const names = selectedPlatforms.map(id => PLATFORMS.find(p => p.id === id).label).join(", ");
@@ -71,8 +112,9 @@ const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/web
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function PromptPreview({ selectedPlatforms, context }) {
+function PromptPreview({ client, selectedPlatforms, context }) {
   const userPrompt = buildUserPrompt(selectedPlatforms, context || "[contexto adicional]");
+  const systemPrompt = buildSystemPrompt(client);
   const blockStyle = {
     background: C.surface,
     border: `1px solid ${C.border}`,
@@ -105,7 +147,7 @@ function PromptPreview({ selectedPlatforms, context }) {
       <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.border}` }}>
         <span style={tagStyle}>SYSTEM</span>
       </div>
-      <pre style={preStyle}>{SYSTEM_PROMPT}</pre>
+      <pre style={preStyle}>{systemPrompt}</pre>
 
       <div style={{ padding: "10px 14px", borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
         <span style={tagStyle}>USUÁRIO</span>
@@ -194,6 +236,7 @@ function ResultCards({ text }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ContentMultiplier() {
+  const [client,          setClient]          = useState(CLIENTS[0]);
   const [files,           setFiles]           = useState([]);
   const [context,         setContext]         = useState("");
   const [platforms,       setPlatforms]       = useState(["instagram"]);
@@ -248,7 +291,7 @@ export default function ContentMultiplier() {
         body: JSON.stringify({
           model: "claude-sonnet-4-6",
           max_tokens: 2500,
-          system: SYSTEM_PROMPT,
+          system: buildSystemPrompt(client),
           messages: [{ role: "user", content }],
         }),
       });
@@ -280,6 +323,41 @@ export default function ContentMultiplier() {
         <p style={{ fontSize: 13, color: C.textMuted, marginTop: 8 }}>
           Envie arquivos ou cole um contexto — gere versões prontas para cada plataforma.
         </p>
+      </div>
+
+      {/* ── Client selector ── */}
+      <div style={{ marginBottom: 28 }}>
+        <label style={{ ...label, color: C.textDim }}>Cliente</label>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {CLIENTS.map((c) => {
+            const active = client.id === c.id;
+            return (
+              <button
+                key={c.id}
+                onClick={() => { setClient(c); setResult(null); setError(null); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  padding: "10px 20px", borderRadius: 10, cursor: "pointer",
+                  fontSize: 14, fontWeight: 500, fontFamily: "inherit",
+                  transition: "all 0.15s",
+                  ...(active ? {
+                    background: C.brand,
+                    border: `1px solid ${C.brand}`,
+                    color: "#fff",
+                    boxShadow: "0 4px 20px rgba(0,82,255,0.35)",
+                  } : {
+                    background: C.surface,
+                    border: `1px solid ${C.border}`,
+                    color: C.textMuted,
+                  }),
+                }}
+              >
+                <span style={{ fontSize: 16 }}>{c.emoji}</span>
+                <span>{c.name}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ── File upload ── */}
@@ -447,7 +525,7 @@ export default function ContentMultiplier() {
           VER PROMPT
         </button>
         {showPrompt && (
-          <PromptPreview selectedPlatforms={platforms} context={context} />
+          <PromptPreview client={client} selectedPlatforms={platforms} context={context} />
         )}
       </div>
 
