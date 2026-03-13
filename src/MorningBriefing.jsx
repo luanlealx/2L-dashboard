@@ -4,6 +4,8 @@ import { C, label } from "./tokens.js";
 const CLIENTS = [
   { id: "zeroledger",  name: "ZeroLedger",  emoji: "⛓" },
   { id: "base-brasil", name: "Base Brasil", emoji: "🏔" },
+  { id: "aco-labs",    name: "ACO Labs",    emoji: "🤖" },
+  { id: "aura-mode",   name: "AURA Mode",   emoji: "✨" },
 ];
 
 function buildPrompt(clientName, metrics) {
@@ -135,7 +137,7 @@ export default function MorningBriefing() {
       {/* Client selector */}
       <div style={{ marginBottom: 28 }}>
         <label style={{ ...label, color: C.textDim }}>Cliente</label>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 6, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 2 }}>
           {CLIENTS.map((c) => {
             const active = client.id === c.id;
             return (
@@ -143,15 +145,15 @@ export default function MorningBriefing() {
                 key={c.id}
                 onClick={() => { setClient(c); setBriefing(null); setError(null); }}
                 style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "10px 20px", borderRadius: 10, cursor: "pointer",
-                  fontSize: 14, fontWeight: 500, fontFamily: "inherit",
+                  display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
+                  padding: "7px 12px", borderRadius: 8, cursor: "pointer",
+                  fontSize: 13, fontWeight: 500, fontFamily: "inherit",
                   transition: "all 0.15s",
                   ...(active ? {
                     background: C.brand,
                     border: `1px solid ${C.brand}`,
                     color: "#fff",
-                    boxShadow: "0 4px 20px rgba(0,82,255,0.35)",
+                    boxShadow: "0 4px 16px rgba(0,82,255,0.35)",
                   } : {
                     background: C.surface,
                     border: `1px solid ${C.border}`,
@@ -159,7 +161,7 @@ export default function MorningBriefing() {
                   }),
                 }}
               >
-                <span style={{ fontSize: 16 }}>{c.emoji}</span>
+                <span style={{ fontSize: 14 }}>{c.emoji}</span>
                 <span>{c.name}</span>
               </button>
             );
