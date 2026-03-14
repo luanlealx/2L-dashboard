@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { C, label } from "./tokens.js";
 import { useClients } from "./hooks/useClients.js";
+import BriefingContent from "./components/BriefingContent.jsx";
 
 const BRIEFING_DB = "6bf4b5f1-8b63-4d76-9552-f48adb9393d1";
 
@@ -212,28 +213,41 @@ ${queries}`,
         </p>
       </div>
 
-      {/* Client selector + button */}
-      <div style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 32 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ ...label, color: C.textMuted }}>Cliente</div>
-          <select
-            value={selectedId}
-            onChange={e => { setSelectedId(e.target.value); reset(); }}
-            disabled={clientsLoading}
-            style={{
-              width: "100%", padding: "10px 14px",
-              background: C.surface, border: `1px solid ${C.border}`,
-              borderRadius: 8, color: selectedId ? C.textBright : C.textMuted,
-              fontSize: 14, fontFamily: "inherit", cursor: "pointer", outline: "none",
-            }}
-          >
-            <option value="">Selecionar cliente…</option>
-            {clients.map(c => (
-              <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>
-            ))}
-          </select>
+      {/* Client selector */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ ...label, color: C.textMuted }}>Cliente</div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {clients.map(c => {
+            const active = selectedId === c.id;
+            return (
+              <button
+                key={c.id}
+                onClick={() => { setSelectedId(c.id); reset(); }}
+                disabled={phase !== null}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
+                  padding: "7px 12px", borderRadius: 8, cursor: phase !== null ? "not-allowed" : "pointer",
+                  fontSize: 13, fontWeight: 500, fontFamily: "inherit",
+                  transition: "all 0.15s",
+                  ...(active ? {
+                    background: C.brand, border: `1px solid ${C.brand}`,
+                    color: "#fff", boxShadow: "0 4px 16px rgba(0,82,255,0.35)",
+                  } : {
+                    background: C.surface, border: `1px solid ${C.border}`,
+                    color: C.textMuted,
+                  }),
+                }}
+              >
+                <span style={{ fontSize: 14 }}>{c.emoji}</span>
+                <span>{c.name}</span>
+              </button>
+            );
+          })}
         </div>
+      </div>
 
+      {/* Generate button */}
+      <div style={{ marginBottom: 32 }}>
         <button
           onClick={generateBriefing}
           disabled={!selectedId || phase !== null}
@@ -347,21 +361,15 @@ ${queries}`,
               </button>
             </div>
 
-            <pre style={{
-              whiteSpace: "pre-wrap", wordBreak: "break-word",
-              fontSize: 13.5, lineHeight: 1.8, color: C.text,
-              fontFamily: "inherit", margin: 0,
-            }}>
-              {briefing}
-              {phase === "searching" && (
-                <span style={{
-                  display: "inline-block", width: 2, height: "1em",
-                  background: C.brand, marginLeft: 2,
-                  verticalAlign: "text-bottom",
-                  animation: "blink 1s step-end infinite",
-                }} />
-              )}
-            </pre>
+            <BriefingContent text={briefing} />
+            {phase === "searching" && (
+              <span style={{
+                display: "inline-block", width: 2, height: "1em",
+                background: C.brand, marginLeft: 2,
+                verticalAlign: "text-bottom",
+                animation: "blink 1s step-end infinite",
+              }} />
+            )}
           </div>
 
           {/* Save button — only after stream completes */}

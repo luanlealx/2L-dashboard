@@ -174,17 +174,33 @@ function parseClient(page) {
   };
 }
 
+// ─── Module-level cache (shared across all hook instances) ────────────────────
+
+let _cachedClients = null;
+let _cacheTimestamp = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useClients() {
-  const [clients, setClients] = useState(FALLBACK_CLIENTS);
-  const [loading, setLoading] = useState(true);
+  const [clients, setClients] = useState(_cachedClients ?? FALLBACK_CLIENTS);
+  const [loading, setLoading] = useState(_cachedClients === null);
   const [error,   setError]   = useState(null);
   const [tick,    setTick]    = useState(0);
 
-  const refresh = useCallback(() => setTick(t => t + 1), []);
+  const refresh = useCallback(() => {
+    _cacheTimestamp = 0; // invalidate cache on manual refresh
+    setTick(t => t + 1);
+  }, []);
 
   useEffect(() => {
+    // Serve from cache if fresh
+    if (_cachedClients && Date.now() - _cacheTimestamp < CACHE_TTL) {
+      setClients(_cachedClients);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setLoading(true);
 
@@ -209,6 +225,8 @@ export function useClients() {
         console.log("[useClients] Parsed clients:", parsed.map(c => ({ id: c.id, name: c.name })));
 
         if (!cancelled && parsed.length > 0) {
+          _cachedClients = parsed;
+          _cacheTimestamp = Date.now();
           setClients(parsed);
           setError(null);
         }
