@@ -1,19 +1,27 @@
 import { useState } from "react";
 import { C } from "./tokens.js";
+import Home from "./Home.jsx";
 import MorningBriefing from "./MorningBriefing.jsx";
 import DailyBriefing from "./DailyBriefing.jsx";
+import ContentCalendar from "./ContentCalendar.jsx";
 import ContentMultiplier from "./ContentMultiplier.jsx";
 import ClientBase from "./ClientBase.jsx";
 
 const MODULES = [
-  { id: "briefing",      label: "Morning Briefing",       icon: "☀" },
-  { id: "daily",         label: "Daily Briefing (Beta)",   icon: "🔍" },
-  { id: "multiplier",    label: "Content Multiplier",      icon: "⚡" },
-  { id: "clients",       label: "Client Base",             icon: "👥" },
+  { id: "home",       label: "Home",                   icon: "🏠" },
+  { id: "briefing",   label: "Morning Briefing",        icon: "☀" },
+  { id: "daily",      label: "Daily Briefing (Beta)",   icon: "🔍" },
+  { id: "calendar",   label: "Calendário",              icon: "📅" },
+  { id: "multiplier", label: "Content Multiplier",      icon: "⚡" },
+  { id: "clients",    label: "Client Base",             icon: "👥" },
 ];
 
 export default function App() {
-  const [active, setActive] = useState("briefing");
+  const [active, setActive] = useState("home");
+
+  function navigate(moduleId) {
+    setActive(moduleId);
+  }
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: C.bg }}>
@@ -40,18 +48,14 @@ export default function App() {
               2L
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: C.textBright, lineHeight: 1 }}>
-                2L Digital
-              </div>
-              <div style={{ fontSize: 9, fontFamily: "monospace", letterSpacing: "0.18em", color: C.textDim, textTransform: "uppercase", marginTop: 4 }}>
-                Autopilot
-              </div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C.textBright, lineHeight: 1 }}>2L Digital</div>
+              <div style={{ fontSize: 9, fontFamily: "monospace", letterSpacing: "0.18em", color: C.textDim, textTransform: "uppercase", marginTop: 4 }}>Autopilot</div>
             </div>
           </div>
         </div>
 
-        {/* Nav items */}
-        <nav style={{ flex: 1, padding: "12px 10px" }}>
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: "12px 10px", overflowY: "auto" }}>
           {MODULES.map((m) => {
             const isActive = active === m.id;
             return (
@@ -78,18 +82,8 @@ export default function App() {
         </nav>
 
         {/* Footer */}
-        <div style={{
-          padding: "16px 20px", borderTop: `1px solid ${C.border}`,
-          display: "flex", alignItems: "center", gap: 10,
-        }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 7, flexShrink: 0,
-            background: `linear-gradient(135deg, ${C.brand}, ${C.purple})`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 11, fontWeight: 700, color: "#fff",
-          }}>
-            2L
-          </div>
+        <div style={{ padding: "16px 20px", borderTop: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 7, flexShrink: 0, background: `linear-gradient(135deg, ${C.brand}, ${C.purple})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>2L</div>
           <div>
             <div style={{ fontSize: 12, fontWeight: 500, color: C.text, lineHeight: 1 }}>2L Agency</div>
             <div style={{ fontSize: 10, color: C.textDim, marginTop: 3, fontFamily: "monospace" }}>workspace</div>
@@ -98,10 +92,12 @@ export default function App() {
 
       </aside>
 
-      {/* ── Module content ── */}
+      {/* ── Content ── */}
       <main style={{ marginLeft: 220, flex: 1, minHeight: "100vh" }}>
+        {active === "home"       && <Home onNavigate={navigate} />}
         {active === "briefing"   && <MorningBriefing />}
         {active === "daily"      && <DailyBriefing />}
+        {active === "calendar"   && <ContentCalendar />}
         {active === "multiplier" && <ContentMultiplier />}
         {active === "clients"    && <ClientBase />}
       </main>
