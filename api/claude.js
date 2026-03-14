@@ -1,22 +1,21 @@
-// /api/claude.js — Vercel Serverless Function
+// /api/claude.js — Vercel Edge Function
 // Proxy seguro para a API da Anthropic
-// A API key fica em variável de ambiente, nunca exposta no frontend
+// Edge Runtime: sem limite de 10s, suporta streaming nativo
 
-export const config = { maxDuration: 60 };
+export const config = { runtime: "edge" };
 
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return json({ error: "Method not allowed" }, 405);
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: "ANTHROPIC_API_KEY not configured" });
+    return json({ error: "ANTHROPIC_API_KEY not configured" }, 500);
   }
 
   try {
-    // `stream` é flag interna — remove antes de mandar pra Anthropic
-    const { stream, ...body } = req.body;
+    const { stream, ...body } = await req.json();
 
     const upstream = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -28,40 +27,33 @@ export default async function handler(req, res) {
       body: JSON.stringify(stream ? { ...body, stream: true } : body),
     });
 
-    // ── Streaming mode ────────────────────────────────────────────────────────
+    // ── Streaming: repassa o ReadableStream direto ──────────────────────────
     if (stream) {
       if (!upstream.ok) {
-        const err = await upstream.text();
-        return res.status(upstream.status).send(err);
+        return new Response(await upstream.text(), { status: upstream.status });
       }
-
-      res.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-        "X-Accel-Buffering": "no",
+      return new Response(upstream.body, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "X-Accel-Buffering": "no",
+        },
       });
-
-      const reader = upstream.body.getReader();
-      const decoder = new TextDecoder();
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          res.write(decoder.decode(value, { stream: true }));
-        }
-      } finally {
-        res.end();
-      }
-      return;
     }
 
-    // ── Standard (non-streaming) mode ─────────────────────────────────────────
+    // ── Padrão: retorna JSON ────────────────────────────────────────────────
     const data = await upstream.json();
-    return res.status(upstream.status).json(data);
+    return json(data, upstream.status);
 
-  } catch (error) {
-    console.error("Proxy error:", error);
-    return res.status(500).json({ error: error.message });
+  } catch (err) {
+    return json({ error: err.message }, 500);
   }
+}
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
