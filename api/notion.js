@@ -1,16 +1,21 @@
-export default async function handler(req, res) {
+// /api/notion.js — Vercel Edge Function
+// Proxy seguro para a Notion API
+
+export const config = { runtime: "edge" };
+
+export default async function handler(req) {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return json({ error: "Method not allowed" }, 405);
   }
 
   const token = process.env.NOTION_TOKEN;
   if (!token) {
-    return res.status(500).json({ error: "NOTION_TOKEN not configured" });
+    return json({ error: "NOTION_TOKEN not configured" }, 500);
   }
 
-  const { endpoint, method = "GET", body } = req.body ?? {};
+  const { endpoint, method = "GET", body } = await req.json();
   if (!endpoint) {
-    return res.status(400).json({ error: "Missing endpoint" });
+    return json({ error: "Missing endpoint" }, 400);
   }
 
   try {
@@ -25,8 +30,15 @@ export default async function handler(req, res) {
     });
 
     const data = await notionRes.json();
-    return res.status(notionRes.status).json(data);
+    return json(data, notionRes.status);
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return json({ error: err.message }, 500);
   }
+}
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
