@@ -1,104 +1,52 @@
-# 🚀 Agency Autopilot — Agência 2L
+# 2L Agency OS
 
-Dashboard operacional com IA para gestão de clientes da agência.
+Operational dashboard for a social media agency — AI-assisted workflows, client management, and content production.
 
-## Módulos
+## Modules
 
-- **Content Multiplier** — Transforma 1 conteúdo em posts para múltiplas plataformas
-- **Morning Briefing** — Briefing diário com preços crypto + tarefas prioritárias
-- **Delivery Board** — Kanban com drag-and-drop para gestão de entregas
-- **Report Generator** — Upload de métricas → relatório mensal automático com IA
+- **Morning Briefing** — Daily briefing with crypto prices and priority tasks
+- **Content Multiplier** — Transforms 1 piece of content into posts for multiple platforms
+- **Client Base** — Client profiles synced to Notion (editable, with platform/status tracking)
 
 ## Stack
 
-- **Frontend:** React 18 + Vite
-- **Backend:** Vercel Serverless Functions (proxy seguro para Anthropic API)
-- **Deploy:** Vercel (free tier)
-- **Storage:** localStorage (dados ficam no navegador)
+- **Frontend:** React + Vite + Tailwind CSS
+- **Serverless:** Vercel Functions (secure proxy for external APIs)
+- **AI:** Anthropic API (Claude)
+- **Storage:** Notion API (no localStorage)
 
----
+## Environment Variables
 
-## 🚀 Deploy em 5 minutos
+| Variable | Description |
+|---|---|
+| `ANTHROPIC_API_KEY` | Anthropic API key (starts with `sk-ant-`) |
+| `NOTION_TOKEN` | Notion integration token |
 
-### 1. Crie um repo no GitHub
-
-1. Vá em [github.com/new](https://github.com/new)
-2. Nome: `agency-autopilot` (privado)
-3. **NÃO** inicialize com README
-4. Clique "Create repository"
-
-### 2. Suba os arquivos
-
-No terminal (ou pelo GitHub web):
-
-```bash
-cd agency-autopilot-vercel
-git init
-git add .
-git commit -m "🚀 Initial deploy"
-git branch -M main
-git remote add origin https://github.com/SEU_USER/agency-autopilot.git
-git push -u origin main
-```
-
-**Alternativa sem terminal:** No GitHub, clique "uploading an existing file" e arraste todos os arquivos.
-
-### 3. Deploy na Vercel
-
-1. Vá em [vercel.com](https://vercel.com) → Sign up com GitHub
-2. Clique **"Add New Project"**
-3. Selecione o repo `agency-autopilot`
-4. Framework: **Vite** (auto-detecta)
-5. Em **Environment Variables**, adicione:
-   - Name: `ANTHROPIC_API_KEY`
-   - Value: sua API key (começa com `sk-ant-`)
-6. Clique **Deploy**
-
-### 4. Pronto! 🎉
-
-Seu dashboard estará em: `https://agency-autopilot-SEU_USER.vercel.app`
-
----
-
-## 🔄 Como atualizar
-
-1. Peça a mudança pro Claude
-2. Claude gera o arquivo `App.jsx` atualizado
-3. Substitua `src/App.jsx` no GitHub
-4. Vercel auto-deploya em ~15 segundos
-
----
-
-## 🔐 Segurança
-
-- A API key da Anthropic fica **apenas no servidor** (variável de ambiente)
-- O frontend chama `/api/claude` → serverless function adiciona a key → forward para Anthropic
-- Nenhuma credencial exposta no código fonte
-
----
-
-## 📁 Estrutura
+## File Structure
 
 ```
-agency-autopilot-vercel/
 ├── api/
-│   └── claude.js          # Proxy serverless (API key segura)
+│   ├── claude.js       # Anthropic proxy (serverless)
+│   └── notion.js       # Notion proxy (serverless)
 ├── src/
-│   ├── main.jsx           # Entry point React
-│   └── App.jsx            # Dashboard completo (2700+ linhas)
-├── public/                # Assets estáticos (vazio por ora)
-├── index.html             # HTML base
-├── package.json           # Dependências
-├── vite.config.js         # Config Vite + proxy dev
-├── vercel.json            # Config deploy
-├── .env.example           # Template de variáveis
-└── .gitignore
+│   ├── modules/        # Feature modules
+│   ├── hooks/          # Custom React hooks
+│   ├── tokens.js       # Design tokens
+│   └── main.jsx        # Entry point
+├── index.html
+├── vite.config.js
+└── vercel.json
 ```
 
-## Dev local (opcional)
+## Local Dev
 
 ```bash
 npm install
-cp .env.example .env.local  # Preencha com sua key
+cp .env.example .env.local  # fill in your keys
 npm run dev                  # http://localhost:5173
 ```
+
+## Security
+
+- API keys live only in server-side environment variables
+- Frontend calls `/api/claude` and `/api/notion` — keys never exposed in client code
