@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { C } from "./tokens.js";
-import MorningBriefing from "./MorningBriefing.jsx";
+import DailyBriefing from "./DailyBriefing.jsx";
 import ContentMultiplier from "./ContentMultiplier.jsx";
 import ClientBase from "./ClientBase.jsx";
 
 const MODULES = [
-  { id: "briefing",   label: "Morning Briefing",   icon: "☀" },
+  { id: "briefing",   label: "Daily Briefing",     icon: "🔍" },
   { id: "multiplier", label: "Content Multiplier",  icon: "⚡" },
   { id: "clients",    label: "Client Base",         icon: "👥" },
 ];
@@ -98,7 +98,7 @@ export default function App() {
 
       {/* ── Module content ── */}
       <main style={{ marginLeft: 220, flex: 1, minHeight: "100vh" }}>
-        {active === "briefing"   && <MorningBriefing />}
+        {active === "briefing"   && <DailyBriefing />}
         {active === "multiplier" && <ContentMultiplier />}
         {active === "clients"    && <ClientBase />}
       </main>
