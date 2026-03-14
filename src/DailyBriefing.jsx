@@ -33,7 +33,8 @@ export default function DailyBriefing() {
   const { clients, loading: clientsLoading } = useClients();
   const [selectedId, setSelectedId]   = useState("");
   const [briefing,   setBriefing]     = useState("");
-  const [generating, setGenerating]   = useState(false);
+  // phase: null | "queries" | "searching"
+  const [phase,      setPhase]        = useState(null);
   const [saving,     setSaving]       = useState(false);
   const [saved,      setSaved]        = useState(false);
   const [error,      setError]        = useState("");
@@ -48,57 +49,83 @@ export default function DailyBriefing() {
 
   async function generateBriefing() {
     if (!client) return;
-    setGenerating(true);
     reset();
 
-    const system = `Você é um analista de inteligência de mercado especializado em social media para o nicho: ${client.nicho || client.name}.
-
-${client.systemContext}
-
-Use as ferramentas de web search disponíveis para buscar informações reais de hoje antes de responder.
-
-Estruture sua resposta EXATAMENTE com estas 4 seções (use os títulos exatos):
-
-## O que está acontecendo
-Notícias relevantes do nicho nas últimas 24h, movimentos do ecossistema, o que está sendo discutido.
-
-## Ângulos de conteúdo para hoje
-3 a 5 ângulos concretos de posts que fazem sentido dado o contexto do dia. Seja específico — não genérico.
-
-## O que instruir para o time
-Orientações práticas para a equipe de produção: tom, foco, o que evitar hoje.
-
-## Ação imediata
-1 coisa específica para fazer agora — o post mais urgente ou a oportunidade mais quente do dia.`;
-
-    const userMessage = `Faz web search agora e gera o briefing de hoje para ${client.name}.
-
-Nicho: ${client.nicho || "não especificado"}
-Plataformas: ${client.plataformas || "não especificadas"}
-Data: ${todayBR()}
-
-Busca obrigatória:
-1. Notícias do nicho "${client.nicho}" nas últimas 24h
-2. Trending no X/Twitter nesse ecossistema hoje
-3. O que projetos ou concorrentes similares estão postando agora`;
-
     try {
-      const response = await fetch("/api/claude", {
+      // ── Fase 1: gera queries de busca (sem web search, rápido) ───────────────
+      setPhase("queries");
+
+      const q1res = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-6",
-          max_tokens: 4000,
-          stream: true,
-          system,
-          tools: [{ type: "web_search_20250305", name: "web_search" }],
-          messages: [{ role: "user", content: userMessage }],
+          max_tokens: 800,
+          system: `Você é um especialista em pesquisa de mercado para social media.
+Dado o perfil de um cliente, gere exatamente 3 queries de busca em inglês otimizadas para encontrar:
+1. Notícias recentes do nicho (últimas 24h)
+2. Trending topics no X/Twitter do ecossistema
+3. O que projetos concorrentes estão postando agora
+
+Responda APENAS com as 3 queries, uma por linha, sem numeração ou prefixo.`,
+          messages: [{
+            role: "user",
+            content: `Cliente: ${client.name}
+Nicho: ${client.nicho || "não especificado"}
+Plataformas: ${client.plataformas || "não especificadas"}
+Contexto: ${client.systemContext}
+Data: ${todayBR()}
+
+Gere as 3 queries de busca.`,
+          }],
         }),
       });
 
-      if (!response.ok) throw new Error(`API error ${response.status}: ${await response.text()}`);
+      if (!q1res.ok) throw new Error(`Erro ao gerar queries (${q1res.status})`);
+      const q1data = await q1res.json();
+      const queries = q1data.content?.filter(b => b.type === "text").map(b => b.text).join("\n").trim() || "";
+      if (!queries) throw new Error("Não foi possível gerar queries de busca");
 
-      const reader = response.body.getReader();
+      // ── Fase 2: executa buscas e gera briefing (streaming) ──────────────────
+      setPhase("searching");
+
+      const q2res = await fetch("/api/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 1500,
+          stream: true,
+          system: `Você é um analista de inteligência de mercado para social media. ${client.systemContext}
+
+Use a ferramenta de web search para executar as queries fornecidas e gere um briefing diário CONCISO.
+
+Estruture a resposta EXATAMENTE com estas 4 seções:
+
+## O que está acontecendo
+2-3 fatos concretos com fontes. Sem paráfrase — informação real.
+
+## Ângulos de conteúdo para hoje
+3 ângulos específicos de posts. Cada um em 1 linha.
+
+## O que instruir para o time
+2-3 orientações práticas para a equipe. Direto ao ponto.
+
+## Ação imediata
+1 ação específica — o post mais urgente ou oportunidade do dia.`,
+          tools: [{ type: "web_search_20250305", name: "web_search" }],
+          messages: [{
+            role: "user",
+            content: `Execute estas buscas para ${client.name} e gere o briefing do dia (${todayBR()}):
+
+${queries}`,
+          }],
+        }),
+      });
+
+      if (!q2res.ok) throw new Error(`Erro na busca (${q2res.status}): ${await q2res.text()}`);
+
+      const reader = q2res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
 
@@ -119,19 +146,16 @@ Busca obrigatória:
             if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta") {
               setBriefing(prev => prev + evt.delta.text);
             }
-            if (evt.type === "error") {
-              throw new Error(evt.error?.message || "Stream error");
-            }
+            if (evt.type === "error") throw new Error(evt.error?.message || "Stream error");
           } catch (parseErr) {
-            if (parseErr.message !== "Stream error") continue;
-            throw parseErr;
+            if (parseErr.message === "Stream error" || parseErr.message.startsWith("Erro")) throw parseErr;
           }
         }
       }
     } catch (e) {
       setError(e.message);
     } finally {
-      setGenerating(false);
+      setPhase(null);
     }
   }
 
@@ -212,17 +236,19 @@ Busca obrigatória:
 
         <button
           onClick={generateBriefing}
-          disabled={!selectedId || generating}
+          disabled={!selectedId || phase !== null}
           style={{
             padding: "10px 22px", borderRadius: 8, border: "none",
-            background: !selectedId || generating ? C.border : C.brand,
-            color: !selectedId || generating ? C.textMuted : "#fff",
+            background: !selectedId || phase !== null ? C.border : C.brand,
+            color: !selectedId || phase !== null ? C.textMuted : "#fff",
             fontSize: 14, fontWeight: 600, fontFamily: "inherit",
-            cursor: !selectedId || generating ? "not-allowed" : "pointer",
+            cursor: !selectedId || phase !== null ? "not-allowed" : "pointer",
             whiteSpace: "nowrap", transition: "background 0.15s",
           }}
         >
-          {generating ? "Buscando…" : "Gerar Briefing do Dia"}
+          {phase === "queries"   ? "Preparando buscas…" :
+           phase === "searching" ? "Buscando…" :
+                                   "Gerar Briefing do Dia"}
         </button>
       </div>
 
@@ -237,18 +263,49 @@ Busca obrigatória:
         </div>
       )}
 
-      {/* Searching indicator (before first text arrives) */}
-      {generating && !briefing && (
+      {/* Progress indicator */}
+      {phase !== null && !briefing && (
         <div style={{
           padding: "40px 24px", borderRadius: 12, textAlign: "center",
           background: C.surface, border: `1px solid ${C.border}`,
           color: C.textMuted, fontSize: 14,
         }}>
-          <div style={{ fontSize: 30, marginBottom: 12 }}>🔍</div>
-          Fazendo web search para{" "}
-          <strong style={{ color: C.textBright }}>{client?.name}</strong>…
+          <div style={{ fontSize: 30, marginBottom: 12 }}>
+            {phase === "queries" ? "🧠" : "🔍"}
+          </div>
+          <strong style={{ color: C.textBright }}>
+            {phase === "queries" ? "Preparando buscas…" : "Buscando na web…"}
+          </strong>
           <div style={{ fontSize: 12, color: C.textDim, marginTop: 8 }}>
-            Buscando notícias, trends e concorrentes…
+            {phase === "queries"
+              ? `Gerando queries otimizadas para ${client?.name}`
+              : "Buscando notícias, trends e concorrentes"}
+          </div>
+          {/* Step indicators */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 20 }}>
+            {["Preparando", "Buscando", "Resultado"].map((step, i) => {
+              const stepPhase = ["queries", "searching", "done"][i];
+              const isActive  = phase === stepPhase;
+              const isDone    = (phase === "searching" && i === 0);
+              return (
+                <div key={step} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{
+                    width: 8, height: 8, borderRadius: "50%",
+                    background: isDone ? C.brand : isActive ? C.brand : C.border,
+                    opacity: isActive ? 1 : isDone ? 0.5 : 0.3,
+                    transition: "all 0.3s",
+                  }} />
+                  <span style={{
+                    fontSize: 11, fontFamily: "monospace",
+                    color: isActive ? C.textBright : C.textDim,
+                    letterSpacing: "0.05em",
+                  }}>
+                    {step}
+                  </span>
+                  {i < 2 && <span style={{ color: C.textDim, fontSize: 10 }}>—</span>}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -296,7 +353,7 @@ Busca obrigatória:
               fontFamily: "inherit", margin: 0,
             }}>
               {briefing}
-              {generating && (
+              {phase === "searching" && (
                 <span style={{
                   display: "inline-block", width: 2, height: "1em",
                   background: C.brand, marginLeft: 2,
@@ -308,7 +365,7 @@ Busca obrigatória:
           </div>
 
           {/* Save button — only after stream completes */}
-          <div style={{ display: "flex", gap: 12, alignItems: "center", visibility: generating ? "hidden" : "visible" }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", visibility: phase !== null ? "hidden" : "visible" }}>
             <button
               onClick={saveToNotion}
               disabled={saving || saved}
