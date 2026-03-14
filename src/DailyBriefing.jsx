@@ -83,29 +83,51 @@ Busca obrigatória:
 3. O que projetos ou concorrentes similares estão postando agora`;
 
     try {
-      const res = await fetch("/api/claude", {
+      const response = await fetch("/api/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-6",
           max_tokens: 4000,
+          stream: true,
           system,
           tools: [{ type: "web_search_20250305", name: "web_search" }],
           messages: [{ role: "user", content: userMessage }],
         }),
       });
 
-      if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
+      if (!response.ok) throw new Error(`API error ${response.status}: ${await response.text()}`);
 
-      const data = await res.json();
-      const text = data.content
-        ?.filter(b => b.type === "text")
-        .map(b => b.text)
-        .join("\n")
-        .trim() || "";
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
 
-      if (!text) throw new Error("Resposta vazia da API");
-      setBriefing(text);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const json = line.slice(6).trim();
+          if (!json || json === "[DONE]") continue;
+          try {
+            const evt = JSON.parse(json);
+            if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta") {
+              setBriefing(prev => prev + evt.delta.text);
+            }
+            if (evt.type === "error") {
+              throw new Error(evt.error?.message || "Stream error");
+            }
+          } catch (parseErr) {
+            if (parseErr.message !== "Stream error") continue;
+            throw parseErr;
+          }
+        }
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -215,8 +237,8 @@ Busca obrigatória:
         </div>
       )}
 
-      {/* Loading */}
-      {generating && (
+      {/* Searching indicator (before first text arrives) */}
+      {generating && !briefing && (
         <div style={{
           padding: "40px 24px", borderRadius: 12, textAlign: "center",
           background: C.surface, border: `1px solid ${C.border}`,
@@ -226,13 +248,13 @@ Busca obrigatória:
           Fazendo web search para{" "}
           <strong style={{ color: C.textBright }}>{client?.name}</strong>…
           <div style={{ fontSize: 12, color: C.textDim, marginTop: 8 }}>
-            Isso pode levar até 30 segundos
+            Buscando notícias, trends e concorrentes…
           </div>
         </div>
       )}
 
-      {/* Output */}
-      {briefing && !generating && (
+      {/* Output (shows during streaming too) */}
+      {briefing && (
         <div>
           <div style={{
             background: C.surface, border: `1px solid ${C.border}`,
@@ -274,11 +296,19 @@ Busca obrigatória:
               fontFamily: "inherit", margin: 0,
             }}>
               {briefing}
+              {generating && (
+                <span style={{
+                  display: "inline-block", width: 2, height: "1em",
+                  background: C.brand, marginLeft: 2,
+                  verticalAlign: "text-bottom",
+                  animation: "blink 1s step-end infinite",
+                }} />
+              )}
             </pre>
           </div>
 
-          {/* Save button */}
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          {/* Save button — only after stream completes */}
+          <div style={{ display: "flex", gap: 12, alignItems: "center", visibility: generating ? "hidden" : "visible" }}>
             <button
               onClick={saveToNotion}
               disabled={saving || saved}

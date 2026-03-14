@@ -2,8 +2,9 @@
 // Proxy seguro para a API da Anthropic
 // A API key fica em variável de ambiente, nunca exposta no frontend
 
+export const config = { maxDuration: 60 };
+
 export default async function handler(req, res) {
-  // Só aceita POST
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -14,23 +15,51 @@ export default async function handler(req, res) {
   }
 
   try {
-    const body = req.body;
+    // `stream` é flag interna — remove antes de mandar pra Anthropic
+    const { stream, ...body } = req.body;
 
-    // Forward pra API da Anthropic com a key segura
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const upstream = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(stream ? { ...body, stream: true } : body),
     });
 
-    const data = await response.json();
+    // ── Streaming mode ────────────────────────────────────────────────────────
+    if (stream) {
+      if (!upstream.ok) {
+        const err = await upstream.text();
+        return res.status(upstream.status).send(err);
+      }
 
-    // Retorna o status e body da Anthropic pro frontend
-    return res.status(response.status).json(data);
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+      });
+
+      const reader = upstream.body.getReader();
+      const decoder = new TextDecoder();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          res.write(decoder.decode(value, { stream: true }));
+        }
+      } finally {
+        res.end();
+      }
+      return;
+    }
+
+    // ── Standard (non-streaming) mode ─────────────────────────────────────────
+    const data = await upstream.json();
+    return res.status(upstream.status).json(data);
+
   } catch (error) {
     console.error("Proxy error:", error);
     return res.status(500).json({ error: error.message });
