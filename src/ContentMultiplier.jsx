@@ -271,7 +271,7 @@ function ResultCards({ text }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function ContentMultiplier() {
+export default function ContentMultiplier({ seed }) {
   const { clients } = useClients();
   const [clientId,        setClientId]        = useState(null);
   const client = clients.find(c => c.id === clientId) ?? clients[0];
@@ -292,6 +292,13 @@ export default function ContentMultiplier() {
     const derived = parsePlatformsFromText(client?.plataformas ?? "");
     if (derived.length > 0) setPlatforms(derived);
   }, [client?.id]);
+
+  // Seed vindo do Morning Briefing ("Usar no Content Multiplier"): pré-preenche cliente + contexto
+  useEffect(() => {
+    if (!seed) return;
+    if (seed.clientId) setClientId(seed.clientId);
+    if (seed.context)  setContext(seed.context);
+  }, [seed]);
 
   function addFiles(fileList) {
     const valid = Array.from(fileList).filter(f => getFileType(f) !== null);
