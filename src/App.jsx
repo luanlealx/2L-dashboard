@@ -2,7 +2,6 @@ import { useState } from "react";
 import { C } from "./tokens.js";
 import Home from "./Home.jsx";
 import MorningBriefing from "./MorningBriefing.jsx";
-import DailyBriefing from "./DailyBriefing.jsx";
 import ContentCalendar from "./ContentCalendar.jsx";
 import ContentMultiplier from "./ContentMultiplier.jsx";
 import ClientBase from "./ClientBase.jsx";
@@ -10,7 +9,6 @@ import ClientBase from "./ClientBase.jsx";
 const MODULES = [
   { id: "home",       label: "Home",                   icon: "🏠" },
   { id: "briefing",   label: "Morning Briefing",        icon: "☀" },
-  { id: "daily",      label: "Daily Briefing (Beta)",   icon: "🔍" },
   { id: "calendar",   label: "Calendário",              icon: "📅" },
   { id: "multiplier", label: "Content Multiplier",      icon: "⚡" },
   { id: "clients",    label: "Client Base",             icon: "👥" },
@@ -18,9 +16,15 @@ const MODULES = [
 
 export default function App() {
   const [active, setActive] = useState("home");
+  const [seed, setSeed] = useState(null);
 
   function navigate(moduleId) {
     setActive(moduleId);
+  }
+
+  function sendToMultiplier(payload) {
+    setSeed(payload);
+    setActive("multiplier");
   }
 
   return (
@@ -95,10 +99,9 @@ export default function App() {
       {/* ── Content ── */}
       <main style={{ marginLeft: 220, flex: 1, minHeight: "100vh" }}>
         {active === "home"       && <Home onNavigate={navigate} />}
-        {active === "briefing"   && <MorningBriefing />}
-        {active === "daily"      && <DailyBriefing />}
+        {active === "briefing"   && <MorningBriefing onSendToMultiplier={sendToMultiplier} />}
         {active === "calendar"   && <ContentCalendar />}
-        {active === "multiplier" && <ContentMultiplier />}
+        {active === "multiplier" && <ContentMultiplier seed={seed} />}
         {active === "clients"    && <ClientBase />}
       </main>
 
