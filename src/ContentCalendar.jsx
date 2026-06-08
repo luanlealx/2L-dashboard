@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { C, label } from "./tokens.js";
 import { useClients } from "./hooks/useClients.js";
 
-const CALENDAR_DB = "095fcad2-a607-4087-81ab-e72ee8a9b789";
+const CALENDAR_DB = "d414b7ac-b50a-4fec-bd85-aa70b9d0cda2";
 
 const COLUMNS = ["Ideia", "Draft", "Review", "Aprovado", "Agendado", "Publicado"];
 
@@ -16,7 +16,7 @@ const COLUMN_COLORS = {
 };
 
 const PLATFORMS = ["X/Twitter", "Instagram", "LinkedIn", "Farcaster"];
-const FORMATS   = ["Thread", "Post único", "Carrossel", "Vídeo", "Story", "Artigo"];
+const FORMATS   = ["Post", "Thread", "Carrossel", "Vídeo", "Story"];
 
 function getProp(props, ...keys) {
   for (const k of keys) if (props[k]) return props[k];
@@ -84,7 +84,7 @@ function NewPostModal({ clients, onClose, onCreated }) {
   const [title,    setTitle]    = useState("");
   const [clientNm, setClientNm] = useState(clients[0]?.name ?? "");
   const [platform, setPlatform] = useState("X/Twitter");
-  const [format,   setFormat]   = useState("Post único");
+  const [format,   setFormat]   = useState("Post");
   const [date,     setDate]     = useState(todayISO());
   const [status,   setStatus]   = useState("Ideia");
   const [copy,     setCopy]     = useState("");
@@ -97,7 +97,7 @@ function NewPostModal({ clients, onClose, onCreated }) {
     setError("");
     try {
       await notionCreate({
-        Name:       { title:     [{ text: { content: title.trim() } }] },
+        "Título":   { title:     [{ text: { content: title.trim() } }] },
         Cliente:    { rich_text: [{ text: { content: clientNm } }] },
         Plataforma: { select:    { name: platform } },
         Formato:    { select:    { name: format } },
