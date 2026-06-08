@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { C, label } from "./tokens.js";
 import { useClients } from "./hooks/useClients.js";
 
-const CALENDAR_DB   = "095fcad2-a607-4087-81ab-e72ee8a9b789";
-const DELIVERIES_DB = "69f232c0-cf1a-42c6-9195-bbd4dcdc1613";
+const CALENDAR_DB   = "d414b7ac-b50a-4fec-bd85-aa70b9d0cda2";
+const DELIVERIES_DB = "3eb93d57-8e16-43ee-85dd-8353a0409d86";
 
 const STATUS_COLORS = {
   "Ativo":    { bg: "rgba(34,197,94,0.1)",  border: "rgba(34,197,94,0.3)",  text: "#4ade80" },
