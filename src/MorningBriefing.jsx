@@ -3,7 +3,7 @@ import { C, label } from "./tokens.js";
 import { useClients } from "./hooks/useClients.js";
 import BriefingContent from "./components/BriefingContent.jsx";
 
-const BRIEFING_DB = "6bf4b5f1-8b63-4d76-9552-f48adb9393d1";
+const BRIEFING_DB = "3342b39d-6fd2-4d0e-b2df-b8bfefbd5e9b";
 
 const todayBR   = () => new Date().toLocaleDateString("pt-BR");
 const todayISO  = () => new Date().toISOString().split("T")[0];
@@ -271,9 +271,9 @@ As 2-3 ações de maior impacto, em ordem.
           body: {
             parent: { database_id: BRIEFING_DB },
             properties: {
-              Name:    { title: [{ text: { content: `Briefing ${client.name} ${todayBR()}` } }] },
-              Cliente: { rich_text: [{ text: { content: client.name } }] },
-              Data:    { date: { start: todayISO() } },
+              "Título": { title: [{ text: { content: `Briefing ${client.name} ${todayBR()}` } }] },
+              Cliente:   { rich_text: [{ text: { content: client.name } }] },
+              Data:      { date: { start: todayISO() } },
             },
             children: toNotionBlocks(body),
           },
