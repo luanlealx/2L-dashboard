@@ -3,9 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 const DATABASE_ID = "ee27675278c2412d842df1d8415cb37c";
 
 const EMOJI_MAP = {
-  "ZeroLedger":  "⛓",
   "Base Brasil": "🏔",
-  "ACO Labs":    "🤖",
   "AURA Mode":   "✨",
 };
 
@@ -36,23 +34,6 @@ export function serializeIdiomaPerPlatform(obj) {
 
 const FALLBACK_CLIENTS = [
   {
-    id: "zeroledger",
-    name: "ZeroLedger",
-    emoji: "⛓",
-    status: "Ativo",
-    nicho: "Privacy payments em Base L2",
-    plataformas: "X/Twitter, Farcaster",
-    idioma: "English only",
-    tomDeVoz: "Técnico mas acessível, evita jargão desnecessário",
-    restricoes: `⚠ UK compliance: NUNCA usar "rewards", "earn", "referrals" ou "investment"`,
-    objetivos: "Crescimento de comunidade técnica e adoção do protocolo",
-    idiomaPorPlataforma: { "X/Twitter": "English only", "Farcaster": "English only" },
-    systemContext: `Cliente: ZeroLedger — privacy payments em Base L2.
-Tom: técnico mas acessível, evita jargão desnecessário.
-⚠ RESTRIÇÃO CRÍTICA (UK compliance): NUNCA usar as palavras "rewards", "earn", "referrals" ou "investment" em nenhuma circunstância, em nenhum idioma.
-Idioma: escreva sempre em inglês (English only — no exceptions).`,
-  },
-  {
     id: "base-brasil",
     name: "Base Brasil",
     emoji: "🏔",
@@ -73,23 +54,6 @@ Tom: educativo, animado e próximo do público cripto brasileiro.
 Público: comunidade cripto BR, desde iniciantes até usuários avançados.
 Use português BR natural, pode usar gírias do universo cripto quando apropriado.
 Idioma: escreva sempre em português brasileiro.`,
-  },
-  {
-    id: "aco-labs",
-    name: "ACO Labs",
-    emoji: "🤖",
-    status: "Ativo",
-    nicho: "AI agents e automação",
-    plataformas: "X/Twitter, LinkedIn",
-    idioma: "English only",
-    tomDeVoz: "Inovador, direto e orientado a resultados práticos",
-    restricoes: "Sem hype vazio — foco em capacidades reais",
-    objetivos: "Demonstrar capacidades reais de automação e agentes de IA",
-    idiomaPorPlataforma: { "X/Twitter": "English only", "LinkedIn": "English only" },
-    systemContext: `Cliente: ACO Labs — AI agents e automação.
-Tom: inovador, direto e orientado a resultados práticos.
-Foco: demonstrar capacidades reais de automação e agentes de IA, sem hype vazio.
-Idioma: escreva sempre em inglês (English only — no exceptions).`,
   },
   {
     id: "aura-mode",
@@ -221,7 +185,7 @@ export function useClients() {
         const data = await res.json();
         console.log("[useClients] Notion response:", data);
 
-        const parsed = (data.results ?? []).map(parseClient).filter(c => c.name);
+        const parsed = (data.results ?? []).map(parseClient).filter(c => c.name && c.status !== "Pausado");
         console.log("[useClients] Parsed clients:", parsed.map(c => ({ id: c.id, name: c.name })));
 
         if (!cancelled && parsed.length > 0) {
