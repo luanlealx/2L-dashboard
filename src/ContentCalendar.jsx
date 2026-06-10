@@ -1,22 +1,36 @@
 import { useState, useEffect, useRef } from "react";
 import { C, label } from "./tokens.js";
-import { useClients } from "./hooks/useClients.js";
 
-const CALENDAR_DB = "d414b7ac-b50a-4fec-bd85-aa70b9d0cda2";
+// ── Calendário REAL da Base (workspace Base Brasil) ──────────────────────────
+// O app lê e grava direto aqui. Fonte única => app e Notion sempre sincronizados.
+// Para conectar a AURA depois, troque por um mapa { cliente: databaseId }.
+const CALENDAR_DB = "e67c97d7-bd6e-4f8e-b42b-50cdb42acde4";
 
-const COLUMNS = ["Ideia", "Draft", "Review", "Aprovado", "Agendado", "Publicado"];
-
+// Status REAIS do Notion (tipo "status"). Arrastar grava exatamente esses nomes.
+const COLUMNS = ["Not started", "In progress", "Done"];
+const COLUMN_LABELS = {
+  "Not started": "A fazer",
+  "In progress": "Em produção",
+  "Done":        "Pronto",
+};
 const COLUMN_COLORS = {
-  "Ideia":     C.textDim,
-  "Draft":     "#6B9FFF",
-  "Review":    "#fbbf24",
-  "Aprovado":  "#4ade80",
-  "Agendado":  "#a78bfa",
-  "Publicado": "#34d399",
+  "Not started": C.textDim,
+  "In progress": "#6B9FFF",
+  "Done":        "#4ade80",
 };
 
-const PLATFORMS = ["X/Twitter", "Instagram", "LinkedIn", "Farcaster"];
-const FORMATS   = ["Post", "Thread", "Carrossel", "Vídeo", "Story"];
+const PLATFORMS    = ["X", "Instagram", "YouTube", "Discord"];
+const TIPOS        = ["Video Luan", "Video Afonso", "Post + Img", "Reels", "Carrossel", "Live", "Thread", "Corte"];
+const PILARES      = ["Base App", "Builders", "Educacao", "Cultura", "Lideranca"];
+const RESPONSAVEIS = ["Luan", "Dan", "Afonso", "Acid"];
+
+const PILAR_COLORS = {
+  "Base App":  "#6B9FFF",
+  "Builders":  "#4ade80",
+  "Educacao":  "#fbbf24",
+  "Cultura":   "#a78bfa",
+  "Lideranca": "#fb923c",
+};
 
 function getProp(props, ...keys) {
   for (const k of keys) if (props[k]) return props[k];
@@ -80,13 +94,14 @@ async function notionCreate(properties) {
 
 // ─── Modal novo post ───────────────────────────────────────────────────────────
 
-function NewPostModal({ clients, onClose, onCreated }) {
+function NewPostModal({ onClose, onCreated }) {
   const [title,    setTitle]    = useState("");
-  const [clientNm, setClientNm] = useState(clients[0]?.name ?? "");
-  const [platform, setPlatform] = useState("X/Twitter");
-  const [format,   setFormat]   = useState("Post");
+  const [pilar,    setPilar]    = useState("Base App");
+  const [platform, setPlatform] = useState("X");
+  const [tipo,     setTipo]     = useState("Post + Img");
+  const [resp,     setResp]     = useState("Luan");
   const [date,     setDate]     = useState(todayISO());
-  const [status,   setStatus]   = useState("Ideia");
+  const [status,   setStatus]   = useState("Not started");
   const [copy,     setCopy]     = useState("");
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState("");
@@ -97,12 +112,13 @@ function NewPostModal({ clients, onClose, onCreated }) {
     setError("");
     try {
       await notionCreate({
-        "Título":   { title:     [{ text: { content: title.trim() } }] },
-        Cliente:    { rich_text: [{ text: { content: clientNm } }] },
-        Plataforma: { select:    { name: platform } },
-        Formato:    { select:    { name: format } },
-        Status:     { select:    { name: status } },
-        Data:       { date:      { start: date } },
+        Post:        { title:  [{ text: { content: title.trim() } }] },
+        Status:      { status: { name: status } },
+        Pilar:       { select: { name: pilar } },
+        Plataforma:  { select: { name: platform } },
+        Tipo:        { select: { name: tipo } },
+        Responsavel: { select: { name: resp } },
+        Data:        { date:   { start: date } },
         ...(copy.trim() ? { Copy: { rich_text: [{ text: { content: copy.trim() } }] } } : {}),
       });
       onCreated();
@@ -126,7 +142,7 @@ function NewPostModal({ clients, onClose, onCreated }) {
       onClick={onClose}
     >
       <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 500, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: "28px 28px 24px", maxHeight: "90vh", overflowY: "auto" }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: C.textBright, marginBottom: 20 }}>+ Novo post</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: C.textBright, marginBottom: 20 }}>+ Novo post · Base Brasil</div>
 
         <div style={{ marginBottom: 14 }}>
           <div style={{ ...label, color: C.textMuted }}>Título</div>
@@ -135,15 +151,15 @@ function NewPostModal({ clients, onClose, onCreated }) {
 
         <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ ...label, color: C.textMuted }}>Cliente</div>
-            <select value={clientNm} onChange={e => setClientNm(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
-              {clients.map(c => <option key={c.id} value={c.name}>{c.emoji} {c.name}</option>)}
+            <div style={{ ...label, color: C.textMuted }}>Pilar</div>
+            <select value={pilar} onChange={e => setPilar(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+              {PILARES.map(p => <option key={p}>{p}</option>)}
             </select>
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ ...label, color: C.textMuted }}>Status</div>
             <select value={status} onChange={e => setStatus(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
-              {COLUMNS.map(s => <option key={s}>{s}</option>)}
+              {COLUMNS.map(s => <option key={s} value={s}>{COLUMN_LABELS[s]}</option>)}
             </select>
           </div>
         </div>
@@ -156,16 +172,24 @@ function NewPostModal({ clients, onClose, onCreated }) {
             </select>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ ...label, color: C.textMuted }}>Formato</div>
-            <select value={format} onChange={e => setFormat(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
-              {FORMATS.map(f => <option key={f}>{f}</option>)}
+            <div style={{ ...label, color: C.textMuted }}>Tipo</div>
+            <select value={tipo} onChange={e => setTipo(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+              {TIPOS.map(f => <option key={f}>{f}</option>)}
             </select>
           </div>
         </div>
 
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ ...label, color: C.textMuted }}>Data</div>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
+        <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ ...label, color: C.textMuted }}>Responsável</div>
+            <select value={resp} onChange={e => setResp(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+              {RESPONSAVEIS.map(r => <option key={r}>{r}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ ...label, color: C.textMuted }}>Data</div>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
+          </div>
         </div>
 
         <div style={{ marginBottom: 20 }}>
@@ -189,6 +213,7 @@ function NewPostModal({ clients, onClose, onCreated }) {
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
 function PostCard({ post, onDragStart }) {
+  const pilarColor = PILAR_COLORS[post.pilar] ?? C.textDim;
   return (
     <div
       draggable
@@ -197,6 +222,7 @@ function PostCard({ post, onDragStart }) {
         background: C.surface, border: `1px solid ${C.border}`,
         borderRadius: 10, padding: "12px 14px", cursor: "grab",
         userSelect: "none", transition: "border-color 0.15s",
+        borderLeft: `3px solid ${pilarColor}`,
       }}
       onMouseEnter={e => e.currentTarget.style.borderColor = C.brand}
       onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
@@ -205,9 +231,9 @@ function PostCard({ post, onDragStart }) {
         {post.title}
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-        {post.client && (
-          <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 20, background: C.bg, border: `1px solid ${C.border}`, color: C.textMuted }}>
-            {post.clientEmoji} {post.client}
+        {post.pilar && (
+          <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 20, background: C.bg, border: `1px solid ${C.border}`, color: pilarColor }}>
+            {post.pilar}
           </span>
         )}
         {post.platform && (
@@ -215,17 +241,22 @@ function PostCard({ post, onDragStart }) {
             {post.platform}
           </span>
         )}
-        {post.format && (
+        {post.tipo && (
           <span style={{ fontSize: 10, color: C.textDim }}>
-            {post.format}
+            {post.tipo}
           </span>
         )}
       </div>
-      {post.date && (
-        <div style={{ fontSize: 10, fontFamily: "monospace", color: C.textDim, marginTop: 8 }}>
-          {new Date(post.date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
-        </div>
-      )}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
+        {post.date ? (
+          <span style={{ fontSize: 10, fontFamily: "monospace", color: C.textDim }}>
+            {new Date(post.date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+          </span>
+        ) : <span />}
+        {post.resp && (
+          <span style={{ fontSize: 10, color: C.textDim }}>{post.resp}</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -242,7 +273,7 @@ function Column({ name, posts, onDragStart, onDrop }) {
       onDragLeave={() => setOver(false)}
       onDrop={e => { setOver(false); onDrop(e, name); }}
       style={{
-        minWidth: 220, flex: "1 1 220px",
+        minWidth: 240, flex: "1 1 240px",
         background: over ? "rgba(0,82,255,0.05)" : C.surfaceAlt,
         border: `1px solid ${over ? C.brandBorder : C.border}`,
         borderRadius: 12, padding: "14px 12px",
@@ -253,7 +284,7 @@ function Column({ name, posts, onDragStart, onDrop }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, display: "inline-block" }} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: C.textBright }}>{name}</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: C.textBright }}>{COLUMN_LABELS[name] ?? name}</span>
         </div>
         <span style={{ fontSize: 11, color: C.textDim, fontFamily: "monospace" }}>{posts.length}</span>
       </div>
@@ -276,7 +307,6 @@ function Column({ name, posts, onDragStart, onDrop }) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function ContentCalendar() {
-  const { clients } = useClients();
   const [posts,      setPosts]      = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState("");
@@ -284,28 +314,26 @@ export default function ContentCalendar() {
   const [tick,       setTick]       = useState(0);
   const draggingId = useRef(null);
 
-  // emoji map from clients
-  const emojiMap = Object.fromEntries(clients.map(c => [c.name, c.emoji]));
-
   useEffect(() => {
     setLoading(true);
     setError("");
     notionQuery()
       .then(data => {
         const items = (data.results ?? []).map(p => ({
-          id:          p.id,
-          title:       getText(getProp(p.properties, "Name", "Nome", "Título")) || "Sem título",
-          client:      getText(getProp(p.properties, "Cliente", "cliente")) || "",
-          platform:    getText(getProp(p.properties, "Plataforma", "plataforma")) || "",
-          format:      getText(getProp(p.properties, "Formato", "formato")) || "",
-          status:      getText(getProp(p.properties, "Status", "status")) || "Ideia",
-          date:        getText(getProp(p.properties, "Data", "data")) || "",
+          id:       p.id,
+          title:    getText(getProp(p.properties, "Post", "Name", "Título")) || "Sem título",
+          pilar:    getText(getProp(p.properties, "Pilar")) || "",
+          platform: getText(getProp(p.properties, "Plataforma")) || "",
+          tipo:     getText(getProp(p.properties, "Tipo", "Formato")) || "",
+          resp:     getText(getProp(p.properties, "Responsavel", "Responsável")) || "",
+          status:   getText(getProp(p.properties, "Status")) || "Not started",
+          date:     getText(getProp(p.properties, "Data")) || "",
         }));
-        setPosts(items.map(p => ({ ...p, clientEmoji: emojiMap[p.client] ?? "🏢" })));
+        setPosts(items);
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
-  }, [tick, clients.length]);
+  }, [tick]);
 
   function onDragStart(e, id) {
     draggingId.current = id;
@@ -322,7 +350,7 @@ export default function ContentCalendar() {
     setPosts(prev => prev.map(p => p.id === id ? { ...p, status: targetStatus } : p));
 
     try {
-      await notionPatch(id, { Status: { select: { name: targetStatus } } });
+      await notionPatch(id, { Status: { status: { name: targetStatus } } });
     } catch (e) {
       // Revert on error
       setPosts(prev => prev.map(p => p.id === id ? { ...p, status: post.status } : p));
@@ -333,7 +361,7 @@ export default function ContentCalendar() {
   }
 
   const byStatus = COLUMNS.reduce((acc, col) => {
-    acc[col] = posts.filter(p => p.status === col || (!COLUMNS.includes(p.status) && col === "Ideia"));
+    acc[col] = posts.filter(p => p.status === col || (!COLUMNS.includes(p.status) && col === "Not started"));
     return acc;
   }, {});
 
@@ -343,12 +371,12 @@ export default function ContentCalendar() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 32 }}>
         <div>
-          <div style={{ ...label, color: C.brand }}>Calendário de Conteúdo</div>
+          <div style={{ ...label, color: C.brand }}>🏔️ Base Brasil · Calendário de Conteúdo</div>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: C.textBright, margin: 0 }}>
             Kanban de posts
           </h1>
           <p style={{ fontSize: 13, color: C.textMuted, marginTop: 6 }}>
-            Arraste os cards entre as colunas para atualizar o status no Notion.
+            Sincronizado com o Notion da Base. Arraste os cards para atualizar o status nos dois lugares.
           </p>
         </div>
         <button
@@ -385,7 +413,6 @@ export default function ContentCalendar() {
 
       {showModal && (
         <NewPostModal
-          clients={clients}
           onClose={() => setShowModal(false)}
           onCreated={() => setTick(t => t + 1)}
         />
